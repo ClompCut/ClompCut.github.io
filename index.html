@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Joey's Game gallery</h1>
+    </header>
+    <main>
+        <section class="game-section">
+            <div class="game-card">
+                <button class="select-game" type="button" data-video="AquaClomp.mp4" data-title="Labirinto acquatico di Clomp" data-description="Esplora un labirinto acquatico fatto della psiche del tuo protagonista. Tramite il percorso psicoteraputico strategico-breve dovrai affrontare prove paradossali e minacce inaspettate. WASD per muoverti, mouse/touch per interagire, SPAZIO per velocizzare i dialoghi.">Labirinto acquatico di Clomp</button>
+                <button class="select-game" type="button" data-video="chessClomp.mp4" data-title="Scacchi di Clomp" data-description="Scopri una sfida mentale dove tattica e intuizione si incontrano. Usa il mouse per muovere i pezzi e risolvere situazioni strategiche inedite.">Scacchi di Clomp</button>
+            </div>
+            <div class="game-preview">
+                <iframe id="game-frame" src="" title="Anteprima gioco" frameborder="0" allow="autoplay; fullscreen"></iframe>
+            </div>
+        </section>
+    </main>
+    <script>
+        const buttons = document.querySelectorAll('.select-game');
+        const iframe = document.getElementById('game-frame');
+        let iframeReady = false;
+        let pendingLoad = null;
+        let pendingPlay = false;
+
+        const sendPreviewMessage = (message) => {
+            if (iframe.contentWindow) {
+                iframe.contentWindow.postMessage(message, '*');
+            }
+        };
+
+        let previewLoaded = false;
+
+        const loadPreviewFrame = () => {
+            if (!previewLoaded) {
+                iframe.src = 'preview.html';
+                previewLoaded = true;
+            }
+        };
+
+        iframe.addEventListener('load', () => {
+            iframeReady = true;
+            if (pendingLoad) {
+                sendPreviewMessage(pendingLoad);
+            }
+            if (pendingPlay) {
+                sendPreviewMessage({ type: 'play' });
+            }
+            pendingLoad = null;
+            pendingPlay = false;
+        });
+
+        const handleEnter = (videoFile, title, description) => {
+            loadPreviewFrame();
+            pendingLoad = { type: 'load', src: videoFile, title, description };
+            pendingPlay = true;
+            if (iframeReady) {
+                sendPreviewMessage(pendingLoad);
+                sendPreviewMessage({ type: 'play' });
+                pendingLoad = null;
+                pendingPlay = false;
+            }
+        };
+
+        const handleLeave = () => {
+            if (iframeReady) {
+                sendPreviewMessage({ type: 'pause' });
+            }
+            pendingLoad = null;
+            pendingPlay = false;
+        };
+
+        buttons.forEach(button => {
+            const videoFile = button.dataset.video;
+            const title = button.dataset.title || button.textContent.trim();
+            const description = button.dataset.description || 'Passa il mouse su un gioco per vedere l\'anteprima e la descrizione.';
+
+            button.addEventListener('mouseenter', () => handleEnter(videoFile, title, description));
+            button.addEventListener('focus', () => handleEnter(videoFile, title, description));
+            button.addEventListener('mouseleave', handleLeave);
+            button.addEventListener('blur', handleLeave);
+        });
+    </script>
+</body>
+</html>

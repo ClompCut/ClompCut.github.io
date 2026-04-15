@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AquaClomp Preview</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+            background: #051420;
+            color: #fff;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .preview-layout {
+            display: flex;
+            gap: 1.5rem;
+            width: min(100%, 1400px);
+            height: min(100%, 720px);
+            min-height: 360px;
+        }
+
+        .preview-description {
+            flex: 0 0 min(42%, 360px);
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 24px;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .preview-description h2 {
+            margin: 0;
+            font-size: clamp(1.5rem, 2vw, 2.4rem);
+            line-height: 1.1;
+        }
+
+        .preview-description p {
+            margin: 0;
+            font-size: 1rem;
+            line-height: 1.75;
+            white-space: pre-wrap;
+        }
+
+        .preview-video-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #071a2e;
+            border-radius: 24px;
+            padding: 1rem;
+        }
+
+        video {
+            width: 100%;
+            max-width: 100%;
+            aspect-ratio: 16 / 9;
+            object-fit: cover;
+            border-radius: 20px;
+            background: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-layout">
+        <div class="preview-description">
+            <h2 id="preview-title">Anteprima gioco</h2>
+            <p id="preview-text">Passa il mouse su un gioco per vedere la descrizione a sinistra del video.</p>
+        </div>
+        <div class="preview-video-container">
+            <video id="preview-video" src="" muted playsinline></video>
+        </div>
+    </div>
+    <script>
+        const video = document.getElementById('preview-video');
+        const titleElement = document.getElementById('preview-title');
+        const descriptionElement = document.getElementById('preview-text');
+        let currentVideo = '';
+
+        const loadVideo = (src) => {
+            if (!src) return;
+            if (currentVideo !== src) {
+                video.pause();
+                video.setAttribute('src', src);
+                currentVideo = src;
+            }
+            video.load();
+        };
+
+        const updateDescription = (title, description) => {
+            titleElement.textContent = title || 'Anteprima gioco';
+            descriptionElement.textContent = description || 'Passa il mouse su un gioco per vedere la descrizione a sinistra del video.';
+        };
+
+        window.addEventListener('message', event => {
+            const message = event.data;
+            if (message && typeof message === 'object') {
+                if (message.type === 'load') {
+                    loadVideo(message.src);
+                    updateDescription(message.title, message.description);
+                    return;
+                }
+                if (message.type === 'play') {
+                    video.play().catch(() => {});
+                    return;
+                }
+                if (message.type === 'pause') {
+                    video.pause();
+                    video.currentTime = 0;
+                    return;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
