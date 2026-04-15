@@ -1,0 +1,2689 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, viewport-fit=cover">
+<title>Il Labirinto di Clomp 🌊</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#000;overflow:hidden;font-family:'Georgia',serif;touch-action:none}
+canvas{display:block}
+#hud{position:fixed;top:18px;left:18px;color:#a0f0ff;font-size:13px;text-shadow:0 0 8px #00aaff;pointer-events:none;z-index:10}
+.hpbar-wrap{width:190px;height:11px;background:#002233;border:1px solid #005577;border-radius:6px;margin-top:4px;overflow:hidden}
+.hpbar{height:100%;background:linear-gradient(90deg,#00ccff,#00ffcc);border-radius:6px;transition:width .3s}
+#loc{margin-top:7px;color:#336677;font-size:11px}
+#status-row{margin-top:5px;display:flex;gap:5px;flex-wrap:wrap}
+.sbadge{font-size:10px;padding:2px 7px;border-radius:3px;border:1px solid}
+.sb-confusione{background:rgba(80,0,80,.6);border-color:#aa00aa;color:#ff88ff}
+.sb-rimuginio{background:rgba(80,40,0,.6);border-color:#aa6600;color:#ffcc44}
+.sb-blocco{background:rgba(0,0,80,.6);border-color:#0000aa;color:#8888ff}
+.sb-proiezione{background:rgba(80,0,0,.6);border-color:#aa0000;color:#ff8888}
+.sb-svuotamento{background:rgba(0,50,50,.6);border-color:#007777;color:#44ffff}
+#minimap{position:fixed;top:18px;right:18px;border:1px solid #006688;border-radius:4px;z-index:10;pointer-events:none}
+/* SCENE OVERLAY */
+#scene-overlay{position:fixed;inset:0;background:radial-gradient(circle at 30% 30%,#0a0f1e,#03050b);display:none;z-index:110;pointer-events:none;animation:fadeIn .5s ease-out}
+#scene-canvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;opacity:.6}
+@keyframes fadeIn{0%{opacity:0}100%{opacity:1}}
+/* DIALOG */
+#dlg{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(0deg,rgba(0,4,18,.97),rgba(0,8,35,.93));border-top:2px solid #0077aa;padding:18px 22px 22px;color:#c0f0ff;font-size:14px;line-height:1.65;display:none;z-index:120;pointer-events:all;max-height:50vh;overflow-y:auto;animation:slideUp .4s ease-out}
+@keyframes slideUp{0%{transform:translateY(100%)}100%{transform:translateY(0)}}
+#dlg-who{color:#ffcc44;font-weight:bold;font-size:15px;margin-bottom:8px}
+#dlg-txt{margin-bottom:14px;white-space:pre-line}
+#dlg-choices{display:flex;flex-direction:column;gap:7px}
+.cbtn{background:rgba(0,45,95,.8);border:1px solid #0077aa;color:#90d8ff;padding:9px 14px;cursor:pointer;border-radius:4px;font-family:'Georgia',serif;font-size:13px;text-align:left;transition:all .18s}
+.cbtn:hover{background:rgba(0,90,170,.8);border-color:#00bbff;color:#fff}
+/* ═══ JRPG MENU ═══ */
+#menu{
+  position:fixed;inset:0;z-index:190;display:none;pointer-events:all;
+  background:rgba(0,0,8,.82);backdrop-filter:blur(6px);
+  animation:menuIn .22s cubic-bezier(.2,.9,.4,1);
+}
+@keyframes menuIn{0%{opacity:0;transform:scale(.97)}100%{opacity:1;transform:scale(1)}}
+#menu-window{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:min(820px,96vw);max-height:90vh;
+  background:linear-gradient(145deg,#04000f,#0a0020 60%,#040010);
+  border:2px solid #4400aa;border-radius:16px;overflow:hidden;
+  display:flex;flex-direction:column;
+  box-shadow:0 0 60px rgba(100,0,200,.35),inset 0 0 40px rgba(0,0,40,.6);
+}
+/* Header */
+#menu-header{
+  background:rgba(0,0,0,.6);border-bottom:1px solid #330066;
+  padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+#menu-title{color:#cc88ff;font-size:18px;letter-spacing:2px;text-shadow:0 0 12px #8800ff}
+#menu-close{background:none;border:1px solid #440077;color:#aa66ff;width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+#menu-close:hover{background:rgba(100,0,150,.4);border-color:#aa44ff;color:#fff}
+/* Tab bar */
+#menu-tabs{display:flex;border-bottom:1px solid #220044;flex-shrink:0}
+.mtab{flex:1;padding:10px;background:none;border:none;color:#6644aa;font-family:'Georgia',serif;font-size:13px;cursor:pointer;border-bottom:3px solid transparent;transition:all .18s;letter-spacing:.5px}
+.mtab:hover{color:#bb88ff;background:rgba(80,0,120,.2)}
+.mtab.active{color:#dd99ff;border-bottom-color:#aa44ff;background:rgba(60,0,100,.25)}
+/* Tab content */
+#menu-content{flex:1;overflow-y:auto;padding:18px 20px;min-height:0}
+#menu-content::-webkit-scrollbar{width:5px}
+#menu-content::-webkit-scrollbar-thumb{background:#3a0066;border-radius:3px}
+/* ── TAB: Stato ── */
+.menu-section-title{color:#9966cc;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid #1a0033}
+#stat-portrait{display:flex;gap:18px;align-items:flex-start;margin-bottom:18px}
+#stat-avatar{width:90px;height:90px;border-radius:10px;border:2px solid #440077;background:linear-gradient(135deg,#0a001a,#150030);display:flex;align-items:center;justify-content:center;font-size:42px;flex-shrink:0;box-shadow:0 0 18px rgba(100,0,200,.3)}
+#stat-info{flex:1}
+.stat-name{color:#cc88ff;font-size:16px;margin-bottom:4px;letter-spacing:1px}
+.stat-sub{color:#6644aa;font-size:11px;margin-bottom:10px}
+.stat-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.stat-bar-lbl{font-size:11px;color:#886699;min-width:60px}
+.stat-bar-outer{flex:1;height:12px;background:#110022;border-radius:6px;overflow:hidden;border:1px solid #220044}
+.stat-bar-inner{height:100%;border-radius:6px;transition:width .4s}
+.stat-bar-val{font-size:11px;color:#bb88ff;min-width:55px;text-align:right}
+.stat-hp-fill{background:linear-gradient(90deg,#00ccff,#00ffcc)}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.stat-card{background:rgba(40,0,70,.4);border:1px solid #2a0055;border-radius:8px;padding:10px 12px}
+.stat-card-label{color:#664488;font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.stat-card-value{color:#cc99ff;font-size:14px;font-weight:bold}
+.stat-card-sub{color:#553366;font-size:10px;margin-top:2px}
+/* encounters progress */
+.enc-list{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.enc-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:6px;background:rgba(20,0,40,.4);border:1px solid #1a0033}
+.enc-item.done{border-color:#004422;background:rgba(0,30,15,.4)}
+.enc-icon{font-size:18px;width:26px;text-align:center}
+.enc-name{flex:1;font-size:12px;color:#9977bb}
+.enc-item.done .enc-name{color:#44bb77}
+.enc-badge{font-size:10px;padding:2px 8px;border-radius:10px}
+.enc-badge.done{background:rgba(0,60,30,.6);border:1px solid #006633;color:#00cc66}
+.enc-badge.todo{background:rgba(40,0,60,.6);border:1px solid #440066;color:#8844aa}
+/* active status effects */
+.status-section{margin-top:14px}
+.no-status{color:#332244;font-size:12px;font-style:italic;padding:8px 0}
+/* ── TAB: Oggetti ── */
+.item-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.item-card{background:rgba(30,0,55,.5);border:1px solid #2a0066;border-radius:9px;padding:12px;cursor:pointer;transition:all .2s;position:relative}
+.item-card:hover:not(.empty){border-color:#8844ff;background:rgba(60,0,110,.6);transform:translateY(-2px)}
+.item-card.empty{opacity:.35;cursor:default}
+.item-card.used{opacity:.3;cursor:default}
+.item-icon{font-size:28px;margin-bottom:6px}
+.item-name{color:#cc99ff;font-size:12px;font-weight:bold;margin-bottom:3px}
+.item-desc{color:#664488;font-size:10px;line-height:1.45}
+.item-qty{position:absolute;top:8px;right:10px;background:rgba(0,0,0,.6);border:1px solid #440077;color:#aa66ff;font-size:10px;padding:1px 6px;border-radius:10px}
+.item-effect{color:#44ffaa;font-size:10px;margin-top:5px;font-style:italic}
+#item-feedback{text-align:center;font-size:12px;color:#44ffaa;min-height:20px;margin-top:8px;transition:opacity .3s}
+/* ── TAB: Salva ── */
+.save-slot{background:rgba(20,0,40,.5);border:1px solid #220044;border-radius:10px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;transition:all .2s}
+.save-slot:hover{border-color:#5500aa;background:rgba(40,0,70,.5)}
+.save-slot-num{width:36px;height:36px;border-radius:8px;background:rgba(80,0,140,.4);border:1px solid #440077;color:#aa66ff;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.save-slot-info{flex:1}
+.save-slot-name{color:#cc88ff;font-size:13px;margin-bottom:3px}
+.save-slot-meta{color:#553366;font-size:10px}
+.save-slot-btns{display:flex;gap:7px}
+.sbtn{padding:7px 14px;border-radius:6px;font-family:'Georgia',serif;font-size:11px;cursor:pointer;transition:all .18s;border:1px solid}
+.sbtn-save{background:rgba(0,60,30,.6);border-color:#006633;color:#00cc66}
+.sbtn-save:hover{background:rgba(0,100,50,.7);border-color:#00aa55}
+.sbtn-load{background:rgba(30,0,80,.6);border-color:#440077;color:#aa66ff}
+.sbtn-load:hover:not(:disabled){background:rgba(60,0,130,.7);border-color:#8844ff}
+.sbtn-del{background:rgba(60,0,0,.5);border-color:#660000;color:#cc4444}
+.sbtn-del:hover:not(:disabled){background:rgba(100,0,0,.6);border-color:#990000}
+.sbtn:disabled{opacity:.3;cursor:not-allowed}
+#save-feedback{text-align:center;font-size:12px;min-height:20px;margin-top:6px;transition:opacity .3s}
+.save-autosave-note{color:#332244;font-size:10px;text-align:center;margin-top:12px;font-style:italic}
+/* menu M-button hint */
+#menu-hint-btn{position:fixed;bottom:9px;right:130px;color:#2a3355;font-size:11px;pointer-events:none;z-index:10}
+
+#btl{
+  position:fixed;inset:0;
+  background:linear-gradient(180deg,#04000e 0%,#0a0018 60%,#000410 100%);
+  color:#d0c0ff;font-family:'Georgia',serif;
+  display:none;z-index:120;pointer-events:all;
+  flex-direction:column;
+  animation:btlIn .35s ease-out;
+}
+@keyframes btlIn{0%{opacity:0}100%{opacity:1}}
+
+/* — TOP: stats — */
+#btl-top{
+  flex-shrink:0;
+  padding:10px 18px 8px;
+  background:rgba(0,0,0,.55);
+  border-bottom:1px solid #330066;
+  display:flex;flex-direction:column;gap:4px;
+}
+#btl-top-row1{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#btl-ename{color:#ff6699;font-size:17px;font-weight:bold;text-shadow:0 0 12px #ff0044;flex:1}
+#btl-phase{font-size:10px;letter-spacing:.7px;transition:color .5s;white-space:nowrap;padding:3px 8px;border-radius:10px;background:rgba(80,0,80,.4);border:1px solid #550066}
+#enemy-badges{display:flex;gap:5px;flex-wrap:wrap;min-height:16px}
+.ebadge{font-size:10px;padding:2px 7px;border-radius:3px}
+.eb-fase{background:rgba(60,30,80,.6);border:1px solid #660088;color:#cc88ff}
+.eb-immune{background:rgba(0,0,80,.5);border:1px solid #0000aa;color:#aaaaff}
+.eb-furia{background:rgba(100,0,0,.6);border:1px solid #ff0000;color:#ff5555}
+
+.brow{display:flex;align-items:center;gap:8px;margin-top:2px}
+.blbl{font-size:10px;min-width:42px;color:#886699}
+.bwrap{flex:1;height:10px;border-radius:5px;overflow:hidden}
+.ebg{background:#33002a}.pbg{background:#002030}
+.efill{height:100%;background:linear-gradient(90deg,#ff0066,#ff6600);border-radius:5px;transition:width .45s}
+.pfill{height:100%;background:linear-gradient(90deg,#00ccff,#00ffcc);border-radius:5px;transition:width .3s}
+.bval{font-size:10px;min-width:52px;text-align:right;color:#886699}
+
+#btl-challenge{
+  background:rgba(50,0,20,.6);border:1px solid #880044;border-radius:6px;
+  padding:6px 11px;margin-top:4px;display:none;
+}
+#btl-challenge-title{font-size:10px;color:#ff6699;font-weight:bold;margin-bottom:2px;letter-spacing:.5px;text-transform:uppercase}
+#btl-challenge-txt{font-size:10px;color:#ffaacc;line-height:1.45}
+
+/* — ARENA: 3D scene — */
+#btl-arena{
+  flex:1;position:relative;overflow:hidden;min-height:0;
+}
+#btl3d{display:block;width:100%;height:100%}
+
+/* — TYPEWRITER DIALOG — */
+#tw-dlg{
+  display:none;flex-shrink:0;
+  border-top:1px solid #2a0055;
+  pointer-events:none;
+}
+#tw-dlg.active{
+  display:block;pointer-events:all;
+  animation:twIn .22s cubic-bezier(.2,.9,.4,1) both;
+}
+#tw-box{
+  width:100%;
+  background:linear-gradient(160deg,rgba(4,0,18,.98),rgba(8,0,26,.98));
+  border:none;border-radius:0;
+  overflow:hidden;
+  box-shadow:0 -4px 24px rgba(80,0,160,.3) inset;
+}
+@keyframes twIn{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:translateY(0)}}
+#tw-who{
+  padding:8px 14px 6px;
+  font-size:11px;font-weight:bold;letter-spacing:.6px;
+  border-bottom:1px solid rgba(80,0,150,.35);
+}
+#tw-who.tw-player{color:#44ccff;background:rgba(0,40,90,.4)}
+#tw-who.tw-enemy{color:#ff6688;background:rgba(80,0,30,.4)}
+#tw-who.tw-system{color:#ffcc44;background:rgba(50,30,0,.4)}
+#tw-who.tw-phase{color:#ff88ff;background:rgba(60,0,70,.4)}
+#tw-who.tw-damage{color:#ff8888;background:rgba(70,0,0,.3)}
+#tw-who.tw-status{color:#cc88ff;background:rgba(35,0,55,.4)}
+#tw-who.tw-victory{color:#00ffaa;background:rgba(0,45,20,.4)}
+#tw-text{
+  padding:13px 16px 10px;
+  font-size:13px;line-height:1.65;color:#e0d0ff;
+  white-space:pre-wrap;min-height:52px;
+  font-family:'Georgia',serif;
+}
+#tw-cursor{
+  display:inline-block;width:2px;height:14px;
+  background:#aa66ff;margin-left:2px;vertical-align:middle;
+  animation:twBlink .55s step-end infinite;
+}
+@keyframes twBlink{0%,100%{opacity:1}50%{opacity:0}}
+#tw-footer{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 14px 11px;
+}
+#tw-counter{font-size:10px;color:#4a2a6a;letter-spacing:.5px}
+#tw-next{
+  background:rgba(60,0,110,.8);border:1.5px solid #7722cc;
+  color:#cc88ff;padding:6px 18px;border-radius:7px;
+  font-family:'Georgia',serif;font-size:12px;cursor:pointer;
+  transition:all .15s;opacity:0;pointer-events:none;
+  letter-spacing:.3px;
+}
+#tw-next.ready{opacity:1;pointer-events:all;animation:twPulse .7s ease-in-out infinite alternate}
+@keyframes twPulse{0%{border-color:#7722cc;box-shadow:none}100%{border-color:#cc44ff;box-shadow:0 0 10px rgba(150,0,255,.4)}}
+#tw-next:hover.ready{background:rgba(100,0,180,.9);color:#fff}
+#tw-skip{font-size:10px;color:#2a1a3a;cursor:pointer;padding:4px 8px;border-radius:4px;transition:color .15s}
+#tw-skip:hover{color:#7744aa}
+#btl-bottom{
+  flex-shrink:0;
+  display:flex;flex-direction:column;
+  background:rgba(0,0,0,.6);
+  border-top:1px solid #2a0055;
+  max-height:55vh;
+  overflow-y:auto;
+}
+#btl-msg{
+  height:130px;overflow-y:auto;
+  padding:7px 10px;display:flex;flex-direction:column;gap:4px;scroll-behavior:smooth;
+  border-bottom:1px solid #1a0033;
+}
+#btl-msg::-webkit-scrollbar{width:4px}
+#btl-msg::-webkit-scrollbar-track{background:rgba(0,0,0,.2)}
+#btl-msg::-webkit-scrollbar-thumb{background:#3a006a;border-radius:3px}
+.log-entry{padding:5px 9px;border-radius:4px;font-size:11px;line-height:1.5;white-space:pre-line;border-left:3px solid;animation:logIn .2s ease-out;flex-shrink:0}
+@keyframes logIn{0%{opacity:0;transform:translateY(3px)}100%{opacity:1;transform:translateY(0)}}
+.log-player{background:rgba(0,55,110,.35);border-color:#0088cc;color:#c0eeff}
+.log-player .log-who{color:#44ccff;font-weight:bold;font-size:10px;display:block;margin-bottom:2px}
+.log-enemy{background:rgba(90,0,25,.35);border-color:#cc0044;color:#ffd0d8}
+.log-enemy .log-who{color:#ff6688;font-weight:bold;font-size:10px;display:block;margin-bottom:2px}
+.log-system{background:rgba(55,35,0,.4);border-color:#cc8800;color:#ffe0a0}
+.log-system .log-who{color:#ffcc44;font-weight:bold;font-size:10px;display:block;margin-bottom:2px}
+.log-phase{background:rgba(75,0,75,.4);border-color:#cc44cc;color:#f0c0ff;font-style:italic}
+.log-phase .log-who{color:#ff88ff;font-weight:bold;font-size:10px;display:block;margin-bottom:2px}
+.log-damage{background:rgba(75,0,0,.3);border-color:#880000;color:#ffaaaa;font-size:10px}
+.log-status{background:rgba(35,0,55,.35);border-color:#8800cc;color:#dda0ff;font-size:10px}
+.log-victory{background:rgba(0,55,25,.4);border-color:#00aa55;color:#a0ffcc}
+.log-victory .log-who{color:#00ffaa;font-weight:bold;font-size:10px;display:block;margin-bottom:2px}
+.log-sep{height:1px;background:rgba(100,0,150,.2);margin:1px 4px;flex-shrink:0}
+#btl-scroll-hint{text-align:center;font-size:10px;color:#5a3a7a;padding:2px 0;cursor:pointer;display:none;border-bottom:1px solid #1a0033}
+#btl-scroll-hint:hover{color:#aa66ff}
+
+#btl-acts{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:8px 14px}
+.abtn{background:rgba(22,0,50,.85);border:1px solid #5500aa;color:#c0a0ff;padding:9px 11px;cursor:pointer;border-radius:6px;font-family:'Georgia',serif;font-size:11px;text-align:left;transition:all .18s;position:relative;min-height:62px}
+.abtn:hover:not(:disabled){background:rgba(75,0,140,.9);border-color:#aa44ff;color:#fff}
+.abtn:disabled{opacity:.28;cursor:not-allowed}
+.abtn.dimmed{border-color:#ff4444}
+.abn{font-weight:bold;font-size:12px;color:#ffaaff;display:block;margin-bottom:2px}
+.abd{font-size:10px;color:#7060aa;display:block;line-height:1.35}
+.abcost{position:absolute;top:7px;right:8px;font-size:10px;color:#ff9944;font-weight:bold}
+.abwarn{position:absolute;bottom:5px;right:8px;font-size:9px;color:#ff4444}
+#btl-footer{padding:0 14px 10px;display:flex;justify-content:center}
+#cont-btn{display:none;background:rgba(0,70,35,.85);border:1px solid #00bb66;color:#00ffaa;padding:8px 28px;cursor:pointer;border-radius:6px;font-family:'Georgia',serif;font-size:13px}
+#cont-btn:hover{background:rgba(0,120,65,.9)}
+/* TITLE */
+#title{position:fixed;inset:0;background:radial-gradient(ellipse at 50% 40%,#001535,#000012);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#a0f0ff;font-family:'Georgia',serif;text-align:center;z-index:200;padding:24px;pointer-events:all}
+#title h1{font-size:34px;color:#7feeff;margin-bottom:8px;letter-spacing:1px}
+#title h2{font-size:15px;color:#4a7a8a;font-weight:normal;font-style:italic;margin-bottom:26px}
+#title p{max-width:500px;line-height:1.75;color:#7a9aaa;margin-bottom:14px;font-size:13px}
+#sBtn{background:rgba(0,75,140,.8);border:2px solid #0088bb;color:#aaeeff;padding:13px 38px;cursor:pointer;border-radius:8px;font-family:'Georgia',serif;font-size:17px;margin-top:16px;transition:all .25s}
+#sBtn:hover{background:rgba(0,120,190,.9);box-shadow:0 0 18px #0099cc;color:#fff}
+/* ENDING */
+#ending{position:fixed;inset:0;background:radial-gradient(ellipse,#001525,#000008);display:none;flex-direction:column;align-items:center;justify-content:center;color:#a0ffcc;font-family:'Georgia',serif;text-align:center;z-index:200;padding:28px;pointer-events:all;overflow-y:auto}
+#ending h1{font-size:28px;color:#00ffaa;margin-bottom:18px}
+#ending p{max-width:600px;line-height:1.8;color:#70bb99;margin-bottom:12px;font-size:13px}
+#notif{position:fixed;top:42%;left:50%;transform:translate(-50%,-50%);background:rgba(0,18,55,.97);border:1px solid #0077bb;color:#a0f0ff;padding:13px 22px;border-radius:8px;font-family:'Georgia',serif;font-size:13px;text-align:center;display:none;pointer-events:none;z-index:150;max-width:360px;line-height:1.5}
+#hint{position:fixed;bottom:9px;left:50%;transform:translateX(-50%);color:#2a5566;font-size:11px;pointer-events:none;z-index:10}
+/* TOUCH CONTROLS */
+#touch-controls{position:fixed;bottom:20px;right:20px;display:flex;flex-direction:column;align-items:flex-end;gap:12px;z-index:80;pointer-events:none}
+.touch-panel{display:flex;gap:12px;pointer-events:none}
+.touch-dpad{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;background:rgba(0,20,40,.5);backdrop-filter:blur(4px);padding:8px;border-radius:18px;border:1px solid #006688;pointer-events:all}
+.touch-btn{width:58px;height:58px;background:rgba(0,45,95,.8);border:2px solid #0077aa;border-radius:14px;color:#90d8ff;font-size:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;touch-action:none;transition:all .08s;box-shadow:0 4px 8px rgba(0,0,0,.4);pointer-events:all}
+.touch-btn:active{background:rgba(0,120,190,.9);border-color:#00bbff;color:#fff;transform:scale(.94)}
+.touch-action-btn{width:120px;height:120px;background:rgba(60,0,80,.75);border:3px solid #aa44ff;border-radius:28px;color:#e0b0ff;font-size:34px;font-weight:bold;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;user-select:none;touch-action:none;transition:all .08s;box-shadow:0 6px 12px rgba(0,0,0,.5);backdrop-filter:blur(4px);pointer-events:all;line-height:1.2}
+.touch-action-btn span{font-size:14px;margin-top:4px;letter-spacing:1px}
+.touch-action-btn:active{background:rgba(140,0,200,.9);border-color:#dd88ff;color:#fff;transform:scale(.94)}
+@media(max-width:600px){.touch-btn{width:50px;height:50px;font-size:22px}.touch-action-btn{width:100px;height:100px;font-size:28px}.touch-action-btn span{font-size:12px}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<!-- OVERLAY ANIMATO DI TRANSIZIONE -->
+<div id="scene-overlay"><canvas id="scene-canvas"></canvas></div>
+
+<!-- CONTROLLI TOUCH -->
+<div id="touch-controls">
+  <div class="touch-panel">
+    <div class="touch-dpad">
+      <div></div><button class="touch-btn" id="t-up">↑</button><div></div>
+      <button class="touch-btn" id="t-left">←</button>
+      <button class="touch-btn" id="t-down">↓</button>
+      <button class="touch-btn" id="t-right">→</button>
+    </div>
+    <button class="touch-action-btn" id="t-action">⏎<span>Azione</span></button>
+  </div>
+</div>
+
+<div id="title">
+  <div style="font-size:32px;margin-bottom:6px">🌊</div>
+  <h1>Il Labirinto di Clomp</h1>
+  <h2>Un viaggio interiore attraverso le acque della mente</h2>
+  <p>Clomp si risveglia in un labirinto acquatico. Le mura sono fatte dei suoi condizionamenti.<br>
+  Per uscire usa le tecniche della <em>Terapia Strategico-Breve</em>.<br><br>
+  I nemici <strong>imparano, si adattano e cambiano forma.</strong><br>
+  Ripetere la stessa mossa non funzionerà a lungo.</p>
+  <button id="sBtn">Inizia il Viaggio</button>
+  <p style="margin-top:18px;font-size:11px;color:#2a4455">WASD · Frecce → muovi &nbsp;|&nbsp; avvicinati ai simboli colorati per interagire</p>
+</div>
+
+<div id="hud">
+  <div>⭐ Clomp</div>
+  <div class="hpbar-wrap"><div class="hpbar" id="phb" style="width:100%"></div></div>
+  <div id="hp-t" style="margin-top:2px;font-size:11px">Energia: 100/100</div>
+  <div id="status-row"></div>
+  <div id="loc" style="margin-top:5px;font-size:10px;color:#336677">Ingresso</div>
+</div>
+
+<canvas id="minimap" width="110" height="110" style="width:110px;height:110px;background:rgba(0,0,28,.85)"></canvas>
+
+<div id="dlg">
+  <div id="dlg-who"></div>
+  <div id="dlg-txt"></div>
+  <div id="dlg-choices"></div>
+</div>
+
+<div id="btl" style="display:none;flex-direction:column">
+  <!-- TOP: stats -->
+  <div id="btl-top">
+    <div id="btl-top-row1">
+      <div id="btl-ename"></div>
+      <div id="btl-phase"></div>
+    </div>
+    <div id="enemy-badges"></div>
+    <div class="brow">
+      <span class="blbl">Nemico</span>
+      <div class="bwrap ebg"><div class="efill" id="ehb" style="width:100%"></div></div>
+      <span class="bval" id="ehp-t"></span>
+    </div>
+    <div class="brow">
+      <span class="blbl">Clomp</span>
+      <div class="bwrap pbg"><div class="pfill" id="bphb" style="width:100%"></div></div>
+      <span class="bval" id="bph-t"></span>
+    </div>
+    <div id="btl-challenge">
+      <div id="btl-challenge-title"></div>
+      <div id="btl-challenge-txt"></div>
+    </div>
+  </div>
+  <!-- ARENA: 3D scene -->
+  <div id="btl-arena">
+    <canvas id="btl3d"></canvas>
+  </div>
+  <!-- BOTTOM: log + typewriter + actions -->
+  <div id="btl-bottom">
+    <div id="btl-msg"></div>
+    <div id="btl-scroll-hint" onclick="scrollBtlToBottom()">&#8595; nuovi messaggi</div>
+    <!-- TYPEWRITER DIALOG (inline nel log) -->
+    <div id="tw-dlg">
+      <div id="tw-box">
+        <div id="tw-who"></div>
+        <div id="tw-text"><span id="tw-content"></span><span id="tw-cursor"></span></div>
+        <div id="tw-footer">
+          <span id="tw-skip" onclick="twSkipAll()">Salta tutto</span>
+          <span id="tw-counter"></span>
+          <button id="tw-next" onclick="twNext()">Avanti &#9654;</button>
+        </div>
+      </div>
+    </div>
+    <div id="btl-acts"></div>
+    <div id="btl-footer"><button id="cont-btn" onclick="btlContinue()">Continua &#8594;</button></div>
+  </div>
+</div>
+
+<!-- ═══ JRPG MENU ═══ -->
+<div id="menu">
+  <div id="menu-window">
+    <div id="menu-header">
+      <div id="menu-title">☰ MENU</div>
+      <button id="menu-close" onclick="closeMenu()">✕</button>
+    </div>
+    <div id="menu-tabs">
+      <button class="mtab active" onclick="switchTab('stato')">👤 Stato</button>
+      <button class="mtab" onclick="switchTab('oggetti')">🎒 Oggetti</button>
+      <button class="mtab" onclick="switchTab('salva')">💾 Salva</button>
+    </div>
+    <div id="menu-content">
+      <!-- TAB STATO -->
+      <div id="tab-stato">
+        <div id="stat-portrait">
+          <div id="stat-avatar">🌊</div>
+          <div id="stat-info">
+            <div class="stat-name">Clomp</div>
+            <div class="stat-sub" id="stat-zone">Esploratrice del Labirinto Interiore</div>
+            <div class="stat-bar-row">
+              <span class="stat-bar-lbl">Energia</span>
+              <div class="stat-bar-outer"><div class="stat-bar-inner stat-hp-fill" id="menu-hpbar" style="width:100%"></div></div>
+              <span class="stat-bar-val" id="menu-hp-val">100/100</span>
+            </div>
+          </div>
+        </div>
+        <div class="stat-grid" id="stat-grid"></div>
+        <div class="status-section">
+          <div class="menu-section-title" style="margin-top:16px">Stati Attivi</div>
+          <div id="menu-status-list"></div>
+        </div>
+        <div style="margin-top:16px">
+          <div class="menu-section-title">Percorso Terapeutico</div>
+          <div class="enc-list" id="menu-enc-list"></div>
+        </div>
+      </div>
+      <!-- TAB OGGETTI -->
+      <div id="tab-oggetti" style="display:none">
+        <div class="menu-section-title">Zaino di Clomp</div>
+        <div class="item-grid" id="item-grid"></div>
+        <div id="item-feedback"></div>
+      </div>
+      <!-- TAB SALVA -->
+      <div id="tab-salva" style="display:none">
+        <div class="menu-section-title">Slot di Salvataggio</div>
+        <div id="save-slots"></div>
+        <div id="save-feedback"></div>
+        <div class="save-autosave-note">Il gioco si salva automaticamente quando chiudi il menu.</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="menu-hint-btn">M — Menu</div>
+
+<div id="notif"></div>
+<div id="ending">
+  <h1>🌊 Libero dalle Acque 🌊</h1>
+  <div id="end-txt"></div>
+  <button onclick="location.reload()" style="background:rgba(0,75,38,.8);border:2px solid #00bb66;color:#00ffaa;padding:11px 28px;cursor:pointer;border-radius:8px;font-family:'Georgia',serif;font-size:15px;margin-top:18px">Ricomincia il Viaggio</button>
+</div>
+<div id="hint">WASD · Frecce — Muovi Clomp &nbsp;|&nbsp; avvicinati ai simboli colorati per gli incontri</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════
+//  WORLD & MAZE
+// ═══════════════════════════════════════════════
+const MAZE=[
+  [1,1,1,1,1,1,1,1,1,1,1],
+  [1,0,0,0,1,0,0,0,1,0,1],
+  [1,0,1,0,1,0,1,0,0,0,1],
+  [1,0,1,0,0,0,1,1,1,0,1],
+  [1,0,1,1,1,0,0,0,0,0,1],
+  [1,0,0,0,0,0,1,0,1,0,1],
+  [1,1,1,0,1,1,1,0,0,0,1],
+  [1,0,0,0,1,0,0,0,1,0,1],
+  [1,0,1,1,1,0,1,0,1,0,1],
+  [1,0,0,0,0,0,1,0,0,0,1],
+  [1,1,1,1,1,1,1,1,1,1,1],
+];
+const CS=4,WH=3,SPD=0.09,ROWS=MAZE.length,COLS=MAZE[0].length;
+
+const ENCS=[
+  {row:3,col:5,type:'dialog',id:'intro',done:false},
+  {row:5,col:3,type:'puzzle',id:'porta',done:false},
+  {row:7,col:5,type:'battle',id:'critico',done:false},
+  {row:4,col:7,type:'puzzle',id:'specchio',done:false},
+  {row:9,col:5,type:'battle',id:'paura',done:false},
+  {row:9,col:9,type:'boss',id:'boss',done:false},
+];
+
+// ═══════════════════════════════════════════════
+//  DIALOGS & PUZZLES
+// ═══════════════════════════════════════════════
+const DIALOGS={
+  intro:{
+    who:'Voce del Labirinto',
+    txt:`Benvenuto, Clomp. Questo labirinto esiste nella tua mente da molto tempo.\n\nOgni muro è fatto di un pensiero che hai creduto senza sceglierlo. Ogni corridoio è un'abitudine che percorri senza accorgertene.\n\nI guardiani che incontrerai sono intelligenti. Imparano da te. Ricordano ciò che hai fatto. Se ripeti sempre la stessa mossa, troveranno il modo di neutralizzarla.\n\nLa via d'uscita richiede flessibilità — e spesso va contro ogni istinto.`,
+    ch:[{t:'Sono pronto.',a:'close'}]
+  }
+};
+
+const PUZZLES={
+  porta:{
+    who:'La Porta Paradossale',
+    txt:`Una porta enorme di roccia ti blocca. Sul muro è inciso:\n\n"Io mi apro solo a chi smette di volermi aprire. La tua intenzione è la mia resistenza. Il tuo abbandono è la mia resa."\n\nIl paradosso di Watzlawick: più tentiamo di controllare un problema, più lo rinforziamo. La soluzione è spesso il contrario di ciò che sembra logico.`,
+    ch:[
+      {t:'🛑 Smetto. Mi volto e mi allontano.',a:'ok',fb:`La porta emette un suono sordo... e si spalanca da sola.\n\n✨ Principio Paradossale applicato: rinunciare al controllo per ottenerlo. In terapia si chiama "prescrizione del non-fare" — interrompe il circolo del tentativo-fallimento-tentativo.`},
+      {t:'💪 Spingo ancora più forte. Non posso cedere.',a:'ko',cost:10,fb:`La porta non si muove di un millimetro. −10 energia.\n\n⚠️ "More of the same": fare di più di ciò che non funziona. Riprova.`,retry:true},
+      {t:'🔍 Cerco un meccanismo nascosto nella roccia.',a:'ko',cost:5,fb:`Non trovi nulla. La soluzione non è tecnica — è paradossale. −5 energia.\n\n⚠️ A volte cerchiamo risposte complesse quando la chiave è nel contrario.`,retry:true}
+    ]
+  },
+  specchio:{
+    who:"Lo Specchio dell'Ansia",
+    txt:`Uno specchio enorme blocca il corridoio. Nel riflesso un mostro fatto di paure — più grande ogni volta che lo guardi con terrore.\n\n"Più mi combatti," dice con la tua voce, "più cresco. Sono l'ansia anticipatoria. Vivo nel futuro che immagini."\n\n"Se ti siederai con me senza fuggire... mi stancherò da solo."`,
+    ch:[
+      {t:'🤝 Mi siedo davanti allo specchio. Lo accolgo.',a:'ok',fb:`Il mostro si gonfia... poi si sgonfia come un pallone bucato. Rimane solo il tuo riflesso normale.\n\n✨ Esposizione paradossale: accogliere il sintomo anziché evitarlo rompe il meccanismo. L'ansia non tollera l'attenzione calma — si dissolve.`},
+      {t:'⚔️ Rompo lo specchio con un pugno!',a:'ko',cost:15,fb:`Lo specchio si frantuma in mille pezzi — ognuno riflette ancora il mostro. Ora ce ne sono mille. −15 energia.\n\n⚠️ Combattere l'ansia direttamente la frammenta e moltiplica. Riprova.`,retry:true},
+      {t:'🏃 Corro via. Non devo guardarlo.',a:'ko',cost:10,fb:`Dopo dieci passi il mostro cresce ancora di più. L'evitamento lo nutre. −10 energia.\n\n⚠️ L'evitamento conferma al cervello che il pericolo è reale. Rafforza esattamente ciò che temi.`,retry:true}
+    ]
+  }
+};
+
+// ═══════════════════════════════════════════════
+//  PLAYER STATE
+// ═══════════════════════════════════════════════
+let pHP=100,pMax=100,pStatus={};
+
+const STATUS_DEF={
+  confusione:{label:'Confusione',desc:'Le tecniche vengono rimescolate casualmente.',turns:2,cls:'sb-confusione'},
+  rimuginio:{label:'Rimuginio',desc:'Ogni tua azione costa 8 HP aggiuntivi.',turns:3,cls:'sb-rimuginio'},
+  blocco:{label:'Blocco',desc:'Non puoi usare tecniche paradossali.',turns:2,cls:'sb-blocco'},
+  proiezione:{label:'Proiezione',desc:'Metà del danno che infliggi torna su di te.',turns:2,cls:'sb-proiezione'},
+  svuotamento:{label:'Svuotamento',desc:'Il nemico drena 10 HP ad ogni suo turno.',turns:3,cls:'sb-svuotamento'},
+};
+
+function applyStatus(id){
+  if(!STATUS_DEF[id])return;
+  pStatus[id]={...STATUS_DEF[id],remaining:STATUS_DEF[id].turns};
+  renderStatusHUD();
+}
+function tickStatus(){
+  const msgs=[];
+  if(pStatus.rimuginio){pHP=Math.max(1,pHP-8);msgs.push('Rimuginio ti logora: −8 energia.');}
+  if(pStatus.svuotamento){pHP=Math.max(1,pHP-10);msgs.push('Svuotamento drena la tua energia: −10 HP.');}
+  Object.keys(pStatus).forEach(k=>{pStatus[k].remaining--;if(pStatus[k].remaining<=0)delete pStatus[k];});
+  renderStatusHUD();
+  return msgs;
+}
+function hasStatus(id){return!!pStatus[id];}
+function renderStatusHUD(){
+  const row=document.getElementById('status-row');row.innerHTML='';
+  Object.values(pStatus).forEach(s=>{
+    const b=document.createElement('span');b.className='sbadge '+s.cls;
+    b.textContent=`${s.label}(${s.remaining})`;b.title=s.desc;row.appendChild(b);
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  ENEMY DEFINITIONS — AI Adattiva
+// ═══════════════════════════════════════════════
+const BATTLES={
+
+  critico:{
+    name:'Il Critico Interiore',emoji:'🪞',maxHp:70,
+    intro:`Una voce che conosce ogni tuo difetto — e che impara.\n\nOsserva le tue scelte e si adatta. Se usi sempre la stessa tecnica, la neutralizzerà. Ogni fase lo rende più pericoloso, ma anche più vulnerabile al paradosso.`,
+    phases:[
+      {th:1.0,label:'Fase I — Giudizio',col:'#9966cc'},
+      {th:0.58,label:'Fase II — Ossessione ⚡',col:'#ff8844',
+        onEnter(b){
+          b.repMemory=[];
+          b.challenge={title:'SFIDA: Memoria Adattiva',txt:'Il Critico ricorda le ultime 2 tecniche usate. Se le ripeti entrambe di seguito, si immunizza e riflette 20 HP su di te.'};
+          return '⚡ MUTAZIONE: Il Critico attiva la Memoria Adattiva! Ora ricorda e neutralizza le tue ripetizioni!';
+        }
+      },
+      {th:0.28,label:'Fase III — Dissoluzione 🌀',col:'#ff2299',
+        onEnter(b){
+          b.bonusParadox=true;
+          b.challenge={title:'SFIDA: Specchio Rovesciato',txt:'Il danno paradossale (🔄) raddoppia. Ma ogni tecnica NON-paradossale causa 10 HP di rimbalzo su di te dalla sua agonia.'};
+          return '🌀 FORMA FINALE: Il Critico si autodistrugge — ma riversa parte del dolore su di te! L\'Accordo Paradossale ora fa il doppio del danno!';
+        }
+      },
+    ],
+    acts:[
+      {id:'par',tag:'par',n:'🔄 Accordo Paradossale',d:'Dai completamente ragione al Critico',baseDmg:26,
+        msg:`Dici con calma: «Hai ragione. Sono imperfetto, sbaglio spesso — e vado benissimo così.» Il Critico rimane in silenzio. Non sa gestire chi non si difende. Si inceppa.`},
+      {id:'ris',tag:'ris',n:'🔍 Ristrutturazione',d:'Reinterpreti la critica come dato utile',baseDmg:17,
+        msg:`Ascolti la voce critica con curiosità: «Che informazione. Cosa stai cercando di proteggermi?» Il Critico perde tono — le sue parole diventano meno cariche.`},
+      {id:'pre',tag:'pre',n:'📋 Prescrizione del Sintomo',d:'Un\'ora fissa al giorno per ascoltarlo',baseDmg:14,
+        msg:`«D'accordo. Dalle 17 alle 18 ti ascolterò completamente. Fuori da quell'ora, silenzio.» Il Critico ingabbiato in un orario perde la sua spontaneità devastante.`},
+      {id:'peg',tag:'peg',n:'🌪️ Catastrofizzazione',d:'Immagini il peggior scenario fino alla noia',baseDmg:11,
+        msg:`Immagini ogni dettaglio del peggior scenario finché diventa quasi ridicolo. Il Critico perde vigore — la catastrofe immaginata si è svuotata di carica emotiva.`},
+    ],
+    onPlayerAct(actId,b){
+      let extra='';
+      const ph=b.currentPhase;
+      if(ph>=1){
+        b.repMemory=b.repMemory||[];b.repMemory.push(actId);
+        if(b.repMemory.length>2)b.repMemory.shift();
+        if(b.repMemory.length===2&&b.repMemory[0]===b.repMemory[1]){
+          const pen=20;pHP=Math.max(1,pHP-pen);renderBtlUI();
+          extra+=`\n⚠️ MEMORIA ADATTIVA: Il Critico aveva previsto questa ripetizione! Riflette ${pen} HP!`;
+        }
+      }
+      if(ph>=2){
+        if(actId!=='par'){pHP=Math.max(1,pHP-10);renderBtlUI();extra+='\n🌀 La sua agonia si riflette su di te: −10 HP.';}
+      }
+      return extra;
+    },
+    onEnemyTurn(b){
+      const ph=b.currentPhase;
+      const pool=[
+        {msg:`«Non sei abbastanza bravo. Non riuscirai mai.»\nLa voce si insinua nelle certezze.`,dmg:13,eff:'rimuginio'},
+        {msg:`«Ricordi quando hai fallito? Tutti se lo ricordano.»`,dmg:15,eff:null},
+        {msg:`«Perché ci provi? Guardati.»`,dmg:11,eff:'blocco'},
+        {msg:`«Quanto ti sforzi. Non basterà mai.»`,dmg:10,eff:'confusione'},
+      ];
+      if(ph>=2)pool.push(
+        {msg:`«Sono dentro di te. Non puoi scacciarmi — solo integrarmi.»`,dmg:17,eff:'proiezione'},
+        {msg:`«Ogni tua azione mi dà forza. Sei tu a costruirmi.»`,dmg:15,eff:'svuotamento'},
+      );
+      return pool[Math.floor(Math.random()*pool.length)];
+    },
+    defMsg:`Il Critico Interiore svanisce in un sussurro.\n\n«Non ero il tuo nemico — ero la parte di te che aveva paura di non essere abbastanza. Ora che mi hai ascoltato senza combattermi e senza cedere, posso finalmente tacere.\n\nPortami con te, ma non lasciarmi guidare.»\n\n✨ La voce critica interna ha sempre una funzione protettiva. La terapia non la elimina — la integra.`
+  },
+
+  paura:{
+    name:'La Paura Evitata',emoji:'🌑',maxHp:95,
+    intro:`Una presenza oscura che cresce ad ogni passo indietro.\n\nHa imparato a distinguere la fuga dall'accettazione. Si nutre dell'evitamento. E quando è disperata, diventa più aggressiva — ma anche più prevedibile.`,
+    phases:[
+      {th:1.0,label:'Fase I — Ombra',col:'#557788'},
+      {th:0.55,label:'Fase II — Paralisi ⚡',col:'#ff6644',
+        onEnter(b){
+          b.avoidCount=0;
+          b.challenge={title:'SFIDA: Congelamento',txt:'Se eviti l\'Esposizione Volontaria per 2 turni consecutivi, salti automaticamente il turno successivo (paralisi da ansia).'};
+          return '⚡ MUTAZIONE: La Paura può ora paralizzarti! Evitare l\'esposizione per 2 turni consecutivi ti blocca completamente!';
+        }
+      },
+      {th:0.22,label:'Fase III — Drenaggio 🌀',col:'#dd0044',
+        onEnter(b){
+          b.draining=true;
+          b.challenge={title:'SFIDA: Drenaggio Esistenziale',txt:'La Paura drena 12 HP ogni turno. Solo la Prescrizione del Sintomo (📋) può interrompere il ciclo una volta per sempre.'};
+          return '🌀 FASE FINALE: La Paura drena la tua energia ogni turno! Solo la Prescrizione del Sintomo spezzerà il ciclo!';
+        }
+      },
+    ],
+    acts:[
+      {id:'esp',tag:'esp',n:'👁️ Esposizione Volontaria',d:'Cerchi attivamente di sentire tutta la paura',baseDmg:20,
+        msg:`Ti fermi e dici: «Voglio sentire tutta la paura. Portami il peggio ora.» Senza l'elemento sorpresa, la Paura perde il suo potere principale. Si rimpicciolisce.`},
+      {id:'pre',tag:'pre',n:'📋 Prescrizione del Sintomo',d:'Un\'ora fissa al giorno dedicata alla paura',baseDmg:28,
+        msg:`Dici: «Ti darò ogni giorno dalle 20 alle 21. Fuori da quell'orario, devo andare avanti.» La Paura, privata della sorpresa e inscatolata nel tempo, crolla.`},
+      {id:'peg',tag:'peg',n:'🌪️ Peggior Scenario',d:'Immagini il peggio in dettaglio esaustivo',baseDmg:17,
+        msg:`Immagini ogni dettaglio del peggior scenario — finché diventa familiare, quasi banale. La Paura perde energia: non può spaventarti con ciò che già conosci.`},
+      {id:'ris',tag:'ris',n:'🔍 Ristrutturazione',d:'La paura come segnale utile, non nemico',baseDmg:13,
+        msg:`Dici: «Sei un segnale. Cosa cerchi di dirmi?» La Paura, reinterpretata come messaggera, si indebolisce parzialmente.`},
+    ],
+    onPlayerAct(actId,b){
+      let extra='';
+      const ph=b.currentPhase;
+      if(ph>=1){
+        if(actId==='esp'){b.avoidCount=0;}
+        else{
+          b.avoidCount=(b.avoidCount||0)+1;
+          if(b.avoidCount>=2){b.avoidCount=0;b.skipTurns=(b.skipTurns||0)+1;extra+='\n⚡ Hai evitato l\'Esposizione per 2 turni! La Paura ti paralizza — salti il prossimo turno!';}
+        }
+      }
+      if(ph>=2&&b.draining&&actId==='pre'){b.draining=false;extra+='\n✨ La Prescrizione spezza il Drenaggio! La Paura perde il suo flusso continuo!';}
+      return extra;
+    },
+    onEnemyTurn(b){
+      const ph=b.currentPhase;
+      const pool=[
+        {msg:`«E se andasse male? E se non ce la facessi?»\nIl futuro immaginato ti opprime.`,dmg:15,eff:'rimuginio'},
+        {msg:`«Torna indietro. È più sicuro non provare.»`,dmg:12,eff:null},
+        {msg:`«Non sai cosa potrebbe succedere.»\nL'incertezza paralizza.`,dmg:11,eff:'blocco'},
+      ];
+      if(ph>=1)pool.push(
+        {msg:`«Guarda come tremi. Questo è chi sei davvero.»\nLe gambe sembrano di piombo.`,dmg:17,eff:'svuotamento'},
+        {msg:`«Ho visto cosa fai quando hai paura. Scappi sempre.»`,dmg:14,eff:'confusione'},
+      );
+      if(ph>=2&&b.draining)pool.push(
+        {msg:`«Non puoi scappare da me. Sono ovunque.»\nL'ombra si espande e drena.`,dmg:19,eff:'svuotamento'},
+      );
+      return pool[Math.floor(Math.random()*pool.length)];
+    },
+    defMsg:`La Paura Evitata si dissolve come nebbia al sole.\n\n«Mi hai cercata invece di fuggire. Mi hai dato un orario invece di lasciarmi libera di sorprenderti. Hai immaginato il peggio invece di lasciarlo incombere nell'indefinito.\n\nOra sai: io non scompaio mai del tutto. Ma tu hai imparato a non lasciarmi decidere per te.»\n\n✨ La paura è un sistema di allerta biologico. La terapia non la elimina — insegna a non delegarle le proprie scelte.`
+  },
+
+  boss:{
+    name:'Il Grande Condizionamento',emoji:'🌀',maxHp:150,
+    intro:`Il guardiano finale. Non è malvagio — è antico. È la somma di tutto ciò che hai creduto senza sceglierlo.\n\nHa TRE FORME. Ogni volta che sembra sconfitto, si trasforma. Le vulnerabilità cambiano. La strategia deve cambiare con lui.`,
+    phases:[
+      {th:1.0,label:'Forma I — Certezza Assoluta 🧱',col:'#8866aa',
+        onEnter(b){
+          b.phaseImmune=new Set(['pre','peg']);
+          b.challenge={title:'FORMA I: Certezza Assoluta',txt:'Il Condizionamento si presenta come verità eterna. Solo 🔄 Accordo Paradossale e 🔍 Ristrutturazione lo scalfiscono. Le altre due hanno efficacia dimezzata.'};
+          return '🧱 FORMA I: Il Condizionamento si erge come una verità assoluta e incrollabile. Solo il paradosso e la ristrutturazione lo scalfiscono davvero.';
+        }
+      },
+      {th:0.63,label:'Forma II — Identità Difesa 🛡️',col:'#cc4444',
+        onEnter(b){
+          b.phaseImmune=new Set(['par']);b.parCost=15;
+          b.challenge={title:'FORMA II: Identità Difesa',txt:'Il Condizionamento si è fuso con la tua identità! L\'Accordo Paradossale (🔄) ora ti costa 15 HP aggiuntivi. Usa 📋 Prescrizione e 🌪️ Catastrofizzazione — funzionano meglio.'};
+          return '🛡️ FORMA II: Il Condizionamento si fonde con la tua identità! Attaccarlo sembra attaccare te stesso. L\'Accordo Paradossale ha un costo!';
+        }
+      },
+      {th:0.28,label:'Forma III — Dissoluzione 🌀',col:'#ff00cc',
+        onEnter(b){
+          b.phaseImmune=new Set();b.parCost=0;
+          b.identityTimer=0;b.parRequired=false;
+          b.challenge={title:'FORMA III: Dissoluzione',txt:'Tutte le tecniche funzionano. Ma ogni 2 turni arriva un ATTACCO IDENTITARIO che richiede 🔄 Accordo Paradossale come risposta. Sbagliare costa 25 HP.'};
+          return '🌀 FORMA FINALE: Il Condizionamento si sta dissolvendo — ma scatena Attacchi Identitari ogni 2 turni! Solo l\'Accordo Paradossale risponde correttamente!';
+        }
+      },
+    ],
+    acts:[
+      {id:'par',tag:'par',n:'🔄 Accordo Paradossale',d:'Accetti completamente il condizionamento',baseDmg:28,
+        msg:`«Hai ragione. Sono esattamente come mi hai costruito — e sono libero di sceglierlo.» Il paradosso dell'accettazione totale: il Condizionamento non sa cosa fare dell'accordo pieno. Si incrina.`},
+      {id:'ris',tag:'ris',n:'🔍 Ristrutturazione',d:'Il condizionamento come mappa del passato',baseDmg:24,
+        msg:`Dici: «Sei stata la mappa giusta per il bambino che ero. Non sei la mappa giusta per l'adulto che sono.» Il Condizionamento sente la sua funzione limitarsi nel tempo. Si indebolisce.`},
+      {id:'pre',tag:'pre',n:'📋 Prescrizione Comportamentale',d:'Agisci deliberatamente come il contrario',baseDmg:22,
+        msg:`Scegli consapevolmente di fare l'esatto opposto di ciò che il Condizionamento prescrive. L'azione nuova crea circuiti nuovi. Il Condizionamento trema davanti all'eccezione.`},
+      {id:'peg',tag:'peg',n:'🌪️ Catastrofizzazione Liberatoria',d:'Immagini il peggior cambiamento possibile',baseDmg:18,
+        msg:`Immagini in dettaglio il peggior risultato del cambiamento — e scopri che è sopportabile. Il Condizionamento perde il suo ultimo argomento.`},
+    ],
+    onPlayerAct(actId,b){
+      let extra='';
+      const ph=b.currentPhase;
+      if(b.phaseImmune&&b.phaseImmune.has(actId)){
+        if(ph===0)extra+='\n⚠️ In Forma I questa tecnica ha efficacia dimezzata.';
+        if(ph===1)extra+='\n⚠️ In Forma II questa tecnica ha efficacia dimezzata!';
+      }
+      if(ph===1&&actId==='par'&&b.parCost){pHP=Math.max(1,pHP-b.parCost);renderBtlUI();extra+=`\n🛡️ Attaccare la tua identità ti costa ${b.parCost} HP!`;}
+      if(ph>=2){
+        if(b.parRequired){
+          if(actId==='par'){extra+='\n✨ Risposta corretta all\'Attacco Identitario!';}
+          else{pHP=Math.max(1,pHP-25);renderBtlUI();extra+='\n⚡ Risposta sbagliata all\'Attacco Identitario! −25 HP!';}
+          b.parRequired=false;
+        }
+        b.identityTimer=(b.identityTimer||0)+1;
+        if(b.identityTimer>=2){b.identityTimer=0;b.pendingIdentity=true;}
+      }
+      return extra;
+    },
+    onEnemyTurn(b){
+      const ph=b.currentPhase;
+      if(ph>=2&&b.pendingIdentity){
+        b.pendingIdentity=false;b.parRequired=true;
+        return{msg:`⚡ ATTACCO IDENTITARIO: «Dimmi — chi sei tu senza di me? Hai mai vissuto un solo momento che non fossi io a guidarti?»\n\nRispondi con 🔄 Accordo Paradossale al prossimo turno!`,dmg:10,eff:null};
+      }
+      const pool=[
+        {msg:`«Sei sempre stato così. Non puoi cambiare davvero.»`,dmg:17,eff:'rimuginio'},
+        {msg:`«Tutti si aspettano che tu rimanga uguale.»`,dmg:15,eff:null},
+        {msg:`«Hai già provato a cambiare. Non ha funzionato.»`,dmg:13,eff:'blocco'},
+        {msg:`«Questo sei tu. Non c'è altro.»`,dmg:19,eff:'confusione'},
+      ];
+      if(ph>=1)pool.push({msg:`«Cambiare significa non essere più te stesso.»`,dmg:22,eff:'proiezione'});
+      if(ph>=2)pool.push({msg:`«Guarda come ti dissolvi. Ogni cambiamento è una piccola morte.»`,dmg:20,eff:'svuotamento'});
+      return pool[Math.floor(Math.random()*pool.length)];
+    },
+    defMsg:`Il Grande Condizionamento si frantuma in tre esplosioni di luce.\n\nDalla Forma I: «Non sono una prigione. Sono le fondamenta di chi eri.»\nDalla Forma II: «L'identità non è una trappola. È un punto di partenza.»\nDalla Forma III: «Vai — il labirinto è aperto.»\n\n✨ I condizionamenti non sono catene da spezzare: sono mappe da aggiornare. La Terapia Strategico-Breve non distrugge il passato — lo ridefinisce come risorsa, non come destino.`
+  }
+};
+
+// ═══════════════════════════════════════════════
+//  THREE.JS SETUP
+// ═══════════════════════════════════════════════
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.setClearColor(0x000510);
+const scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0x000e1f,0.038);
+const cam=new THREE.PerspectiveCamera(58,innerWidth/innerHeight,.1,120);cam.position.set(0,13,9);
+scene.add(new THREE.AmbientLight(0x001828,.9));
+const dirL=new THREE.DirectionalLight(0x3377ff,.55);dirL.position.set(6,12,6);dirL.castShadow=true;scene.add(dirL);
+const wMat=new THREE.MeshStandardMaterial({color:0x2e3e4e,roughness:.92,metalness:.08});
+const wMat2=new THREE.MeshStandardMaterial({color:0x1d2d3a,roughness:1,metalness:0});
+const waters=[],pLights=[];
+
+function rc(r,c){return{x:(c-COLS/2)*CS,z:(r-ROWS/2)*CS};}
+
+function buildMaze(){
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    const{x,z}=rc(r,c);
+    if(MAZE[r][c]===1){
+      const m=new THREE.Mesh(new THREE.BoxGeometry(CS,WH,CS),(r+c)%2===0?wMat:wMat2);
+      m.position.set(x,WH/2-.5,z);m.castShadow=true;m.receiveShadow=true;scene.add(m);
+      if(Math.random()>.55){
+        const sm=new THREE.Mesh(new THREE.BoxGeometry(.4+Math.random()*.7,.25+Math.random()*.3,.4+Math.random()*.7),wMat);
+        sm.position.set(x+(Math.random()-.5)*1.5,WH+.1,z+(Math.random()-.5)*1.5);sm.rotation.y=Math.random()*Math.PI;scene.add(sm);
+      }
+    } else {
+      const wm=new THREE.Mesh(new THREE.PlaneGeometry(CS,CS,3,3),new THREE.MeshStandardMaterial({color:0x001840,roughness:.1,metalness:.85,transparent:true,opacity:.82}));
+      wm.rotation.x=-Math.PI/2;wm.position.set(x,-.5,z);wm.receiveShadow=true;scene.add(wm);waters.push({mesh:wm});
+      const fm=new THREE.Mesh(new THREE.PlaneGeometry(CS,CS),new THREE.MeshStandardMaterial({color:0x000408}));
+      fm.rotation.x=-Math.PI/2;fm.position.set(x,-1.6,z);scene.add(fm);
+      if(Math.random()>.65){
+        const pl=new THREE.PointLight([0x0044ff,0x0077cc,0x00aaff,0x003366][Math.floor(Math.random()*4)],.28+Math.random()*.38,12);
+        pl.position.set(x,1.5,z);scene.add(pl);pLights.push(pl);
+      }
+    }
+  }
+  ENCS.forEach(e=>{
+    const{x,z}=rc(e.row,e.col);e._x=x;e._z=z;
+    const color=e.type==='boss'?0xff00ff:e.type==='battle'?0xff2255:0xffaa00;
+    const mk=new THREE.Mesh(new THREE.CylinderGeometry(.35,.35,.12,10),new THREE.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.65}));
+    mk.position.set(x,-.38,z);scene.add(mk);e._mk=mk;
+    const gl=new THREE.PointLight(color,.9,7);gl.position.set(x,1,z);scene.add(gl);e._gl=gl;
+  });
+}
+buildMaze();
+
+function mkClomp(){
+  const g=new THREE.Group();
+
+  // ── Materials (palette da clomp.html, mantenendo identità visiva) ──
+  const skin  =new THREE.MeshStandardMaterial({color:0xffdcb3,roughness:.4});
+  const hair  =new THREE.MeshStandardMaterial({color:0x00aaff,roughness:.3,emissive:0x001122,emissiveIntensity:.35});
+  const shirt =new THREE.MeshStandardMaterial({color:0x5522bb,roughness:.7,emissive:0x110033,emissiveIntensity:.2});
+  const pants =new THREE.MeshStandardMaterial({color:0x111122,roughness:.85});
+  const shoe  =new THREE.MeshStandardMaterial({color:0x1a1a1a,roughness:.55});
+  const roseMat=new THREE.MeshStandardMaterial({color:0xff5566,emissive:0x220011,emissiveIntensity:.3});
+  const stemMat=new THREE.MeshStandardMaterial({color:0x226622});
+  const eyeWM =new THREE.MeshStandardMaterial({color:0xffffff});
+  const eyeIM =new THREE.MeshStandardMaterial({color:0x0055ff,roughness:.15});
+  const eyePM =new THREE.MeshBasicMaterial({color:0x000000});
+  const mthMat=new THREE.MeshBasicMaterial({color:0xaa3333});
+  const glowM =new THREE.MeshStandardMaterial({color:0x00aaff,emissive:0x00aaff,emissiveIntensity:.5,transparent:true,opacity:.35});
+
+  const mesh=(geo,mat,px,py,pz,rx=0,ry=0,rz=0)=>{
+    const m=new THREE.Mesh(geo,mat);
+    m.position.set(px,py,pz);m.rotation.set(rx,ry,rz);m.castShadow=true;g.add(m);return m;
+  };
+
+  // ── BODY — cilindro affusolato ──
+  mesh(new THREE.CylinderGeometry(.30,.38,.92,20),shirt,0,.28,0);
+
+  // Rosa sulla maglietta
+  const roseG=new THREE.Group();roseG.position.set(0,.30,.36);g.add(roseG);
+  const rBud=new THREE.Mesh(new THREE.SphereGeometry(.075,12,12),roseMat);
+  rBud.scale.set(1,.75,.5);roseG.add(rBud);
+  const rStem=new THREE.Mesh(new THREE.CylinderGeometry(.011,.011,.18,8),stemMat);
+  rStem.position.y=-.13;roseG.add(rStem);
+  const mkLeaf=(x,y,rz)=>{const lf=new THREE.Mesh(new THREE.SphereGeometry(.038,8,8),stemMat);lf.position.set(x,y,0);lf.scale.set(1,.4,.2);lf.rotation.z=rz;roseG.add(lf);};
+  mkLeaf( .055,-.09,-.5);mkLeaf(-.055,-.13,.5);
+
+  // ── HEAD GROUP ──
+  const headG=new THREE.Group();headG.position.set(0,1.12,0);g.add(headG);
+
+  // Testa sferica
+  const headM=new THREE.Mesh(new THREE.SphereGeometry(.34,24,24),skin);
+  headM.castShadow=true;headG.add(headM);
+
+  // Occhi — bianco, iride, pupilla
+  const mkEye=(sx)=>{
+    const ew=new THREE.Mesh(new THREE.SphereGeometry(.062,16,16),eyeWM);ew.position.set(sx*.125,.038,.305);headG.add(ew);
+    const ei=new THREE.Mesh(new THREE.SphereGeometry(.036,16,16),eyeIM);ei.position.set(sx*.125,.038,.332);headG.add(ei);
+    const ep=new THREE.Mesh(new THREE.SphereGeometry(.016,12,12),eyePM);ep.position.set(sx*.125,.038,.358);headG.add(ep);
+  };
+  mkEye(-1);mkEye(1);
+
+  // Naso
+  const noseM=new THREE.Mesh(new THREE.SphereGeometry(.028,10,10),skin);noseM.position.set(0,-.038,.35);headG.add(noseM);
+
+  // Bocca (sorriso con TorusGeometry)
+  const smileM=new THREE.Mesh(new THREE.TorusGeometry(.062,.011,10,24,Math.PI),mthMat);
+  smileM.position.set(0,-.095,.325);smileM.rotation.x=Math.PI;headG.add(smileM);
+
+  // ── HAIR GROUP (figlio di headG) ──
+  const hairG=new THREE.Group();headG.add(hairG);
+
+  // Calotta capelli (semisfera che copre la cima, lascia libera la faccia)
+  const capM=new THREE.Mesh(new THREE.SphereGeometry(.355,20,20,0,Math.PI*2,0,Math.PI/1.78),hair);
+  capM.position.set(0,.015,-.042);capM.rotation.x=-.18;hairG.add(capM);
+
+  // Ciuffi frontali
+  const mkBang=(x,y,z,sx=1)=>{
+    const b=new THREE.Mesh(new THREE.SphereGeometry(.06,10,10),hair);
+    b.position.set(x,y,z);b.scale.set(sx,1.5,.65);b.castShadow=true;hairG.add(b);
+  };
+  mkBang(-.185,.155,.265);mkBang(.185,.155,.265);mkBang(0,.175,.275,1.05);
+
+  // Ciocche posteriori (CylinderGeometry affusolati)
+  const mkStrand=(x,y,z,rz=0,rx=0)=>{
+    const s=new THREE.Mesh(new THREE.CylinderGeometry(.065,.03,.76,8),hair);
+    s.position.set(x,y,z);s.rotation.set(rx,0,rz);s.castShadow=true;hairG.add(s);
+  };
+  mkStrand(-.28,-.42,-.16,-.14,-.05);mkStrand(.28,-.42,-.16, .14,-.05);
+  mkStrand(-.32,-.44,-.06,-.16, .04);mkStrand(.32,-.44,-.06, .16, .04);
+  mkStrand(-.24,-.45, .02,-.12, .08);mkStrand(.24,-.45, .02, .12, .08);
+
+  // Capelli laterali lunghi — questi sono hL e hR (animati nel loop)
+  const sideHairGeo=new THREE.CylinderGeometry(.088,.040,.98,10);
+  const hL=new THREE.Mesh(sideHairGeo,hair);
+  hL.position.set(-.345,-.56,.055);hL.rotation.z=-.18;hL.castShadow=true;
+  hairG.add(hL);
+  const hR=new THREE.Mesh(sideHairGeo,hair);
+  hR.position.set( .345,-.56,.055);hR.rotation.z= .18;hR.castShadow=true;
+  hairG.add(hR);
+
+  // ── ARMS (Group per pivot alla spalla) ──
+  const mkArm=(sx)=>{
+    const ag=new THREE.Group();ag.position.set(sx*.40,.60,0);g.add(ag);
+    // manica
+    const sl=new THREE.Mesh(new THREE.CylinderGeometry(.098,.088,.17,10),shirt);sl.position.y=-.08;ag.add(sl);
+    // braccio pelle
+    const armM=new THREE.Mesh(new THREE.CylinderGeometry(.072,.062,.46,10),skin);armM.position.y=-.40;armM.castShadow=true;ag.add(armM);
+    // mano
+    const hnd=new THREE.Mesh(new THREE.SphereGeometry(.072,10,10),skin);hnd.position.y=-.67;ag.add(hnd);
+    ag.rotation.z=sx*-.2; // leggermente aperte
+    return ag;
+  };
+  const aL=mkArm(-1);
+  const aR=mkArm( 1);
+
+  // ── LEGS (Group per pivot all'anca) ──
+  const mkLeg=(sx)=>{
+    const lg=new THREE.Group();lg.position.set(sx*.165,-.05,0);g.add(lg);
+    const legM=new THREE.Mesh(new THREE.CylinderGeometry(.112,.090,.70,12),pants);legM.position.y=-.37;legM.castShadow=true;lg.add(legM);
+    // scarpa (BoxGeometry disponibile in r128)
+    const shoeM=new THREE.Mesh(new THREE.BoxGeometry(.19,.115,.27),shoe);shoeM.position.set(0,-.76,.04);lg.add(shoeM);
+    // linguetta punta scarpa
+    const tipM=new THREE.Mesh(new THREE.BoxGeometry(.16,.08,.08),shoe);tipM.position.set(0,-.76,.17);lg.add(tipM);
+    return lg;
+  };
+  const lL=mkLeg(-1);
+  const lR=mkLeg( 1);
+
+  // ── GLOW RING (invariato) ──
+  const gw=new THREE.Mesh(new THREE.CylinderGeometry(.85,.85,.14,16),glowM);
+  gw.position.set(0,-.82,0);g.add(gw);
+
+  scene.add(g);
+  return{g,aL,aR,lL,lR,hL,hR,gw};
+}
+const CL=mkClomp();
+const{x:sx,z:sz}=rc(1,1);CL.g.position.set(sx,0,sz);
+const pLight=new THREE.PointLight(0x44aaff,1.6,11);scene.add(pLight);
+const mmC=document.getElementById('minimap'),mc=mmC.getContext('2d');
+
+// ═══════════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════════
+let gs='title',curBattle=null,bTurn='player',bWait=false,dlgCb=null,encCooldown=0;
+const keys={};
+
+// keydown handled by menu system below
+
+function wToG(x,z){return{row:Math.round(z/CS+ROWS/2),col:Math.round(x/CS+COLS/2)};}
+function isWall(x,z){const{row,col}=wToG(x,z);if(row<0||row>=ROWS||col<0||col>=COLS)return true;return MAZE[row][col]===1;}
+
+// ═══════════════════════════════════════════════
+//  SCENE OVERLAY ANIMATA
+// ═══════════════════════════════════════════════
+const sceneOverlay=document.getElementById('scene-overlay');
+const sceneCanvas=document.getElementById('scene-canvas');
+const sctx=sceneCanvas.getContext('2d');
+let animFrame=null,sceneType=null,scenePuzzleId=null;
+
+function resizeSceneCanvas(){sceneCanvas.width=window.innerWidth;sceneCanvas.height=window.innerHeight;}
+window.addEventListener('resize',resizeSceneCanvas);
+resizeSceneCanvas();
+
+function drawSceneFrame(){
+  if(!sceneOverlay.style.display||sceneOverlay.style.display==='none')return;
+  sctx.clearRect(0,0,sceneCanvas.width,sceneCanvas.height);
+  const time=Date.now()/1000;
+  const W=sceneCanvas.width,H=sceneCanvas.height;
+
+  if(sceneType==='puzzle'){
+    const grad=sctx.createRadialGradient(W/2,H/2,50,W/2,H/2,400);
+    grad.addColorStop(0,`hsl(${(time*20)%360},70%,10%)`);
+    grad.addColorStop(1,'#050a14');
+    sctx.fillStyle=grad;sctx.fillRect(0,0,W,H);
+
+    if(scenePuzzleId==='specchio'){
+      sctx.save();sctx.translate(W/2,H/2);
+      sctx.shadowColor='#aaf0ff';sctx.shadowBlur=30;
+      sctx.beginPath();sctx.ellipse(0,0,120+Math.sin(time*2)*10,160+Math.cos(time*1.7)*10,0,0,Math.PI*2);
+      sctx.fillStyle='rgba(20,40,80,0.6)';sctx.fill();
+      sctx.strokeStyle='#7fc8ff';sctx.lineWidth=4;sctx.stroke();
+      sctx.beginPath();sctx.ellipse(-15,-10,40,60,0,0,Math.PI*2);
+      sctx.fillStyle='rgba(200,230,255,0.15)';sctx.fill();
+      sctx.restore();
+    } else if(scenePuzzleId==='porta'){
+      sctx.fillStyle='#3a2e1e';sctx.fillRect(W/2-100,H/2-150,200,300);
+      sctx.fillStyle='#5c4a32';sctx.fillRect(W/2-90,H/2-140,180,280);
+      sctx.font='bold 30px Georgia';
+      sctx.fillStyle=`rgba(255,215,100,${0.5+Math.sin(time*3)*.3})`;
+      sctx.textAlign='center';sctx.fillText('⏛',W/2,H/2-20);
+    }
+    for(let i=0;i<20;i++){
+      const px=(i*73+time*10)%W,py=(Math.sin(i+time)*20+i*37)%H;
+      sctx.beginPath();sctx.arc(px,py,2,0,Math.PI*2);
+      sctx.fillStyle=`rgba(100,200,255,${.3+Math.sin(time+i)*.2})`;sctx.fill();
+    }
+  } else if(sceneType==='battle'){
+    const grad=sctx.createRadialGradient(W/2,H/2,10,W/2,H/2,500);
+    grad.addColorStop(0,'#1a0033');grad.addColorStop(.7,'#0d001a');
+    sctx.fillStyle=grad;sctx.fillRect(0,0,W,H);
+    sctx.strokeStyle=`rgba(200,100,255,${.2+Math.sin(time*5)*.1})`;sctx.lineWidth=2;
+    for(let i=0;i<5;i++){
+      sctx.beginPath();
+      sctx.moveTo(W/2+Math.sin(time*2+i)*100,H/2-50);
+      sctx.lineTo(W/2+Math.cos(time*3+i*2)*80,H/2+50);
+      sctx.stroke();
+    }
+  }
+  animFrame=requestAnimationFrame(drawSceneFrame);
+}
+
+function showSceneOverlay(type,puzzleId=null){
+  sceneType=type;scenePuzzleId=puzzleId;
+  if(animFrame)cancelAnimationFrame(animFrame);
+  sceneOverlay.style.display='block';
+  animFrame=requestAnimationFrame(drawSceneFrame);
+}
+function hideSceneOverlay(){
+  sceneOverlay.style.display='none';
+  if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
+  sceneType=null;scenePuzzleId=null;
+}
+
+// ═══════════════════════════════════════════════
+//  HUD & MINIMAP
+// ═══════════════════════════════════════════════
+const ZONES=[{r:1,c:1,n:'Ingresso del Labirinto'},{r:3,c:3,n:'Le Acque della Mente'},{r:5,c:5,n:'Corridoio del Dubbio'},{r:4,c:8,n:'Soglia della Trasformazione'},{r:7,c:5,n:'Galleria dei Fantasmi'},{r:9,c:5,n:'Cuore del Labirinto'},{r:9,c:9,n:'Sanctum Finale'}];
+function updateHUD(){
+  document.getElementById('phb').style.width=Math.max(0,pHP/pMax*100)+'%';
+  document.getElementById('hp-t').textContent=`Energia: ${Math.max(0,pHP)}/${pMax}`;
+  const{row,col}=wToG(CL.g.position.x,CL.g.position.z);
+  let best=ZONES[0],bd=999;ZONES.forEach(z=>{const d=Math.abs(z.r-row)+Math.abs(z.c-col);if(d<bd){bd=d;best=z;}});
+  document.getElementById('loc').textContent=best.n;
+}
+function drawMM(){
+  const cw=mmC.width/COLS,ch=mmC.height/ROWS;mc.clearRect(0,0,110,110);
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){mc.fillStyle=MAZE[r][c]===1?'#1e3344':'#001428';mc.fillRect(c*cw,r*ch,cw-.5,ch-.5);}
+  ENCS.forEach(e=>{if(e.done)return;mc.fillStyle=e.type==='boss'?'#ff00ff':e.type==='battle'?'#ff2255':'#ffaa00';mc.fillRect(e.col*cw+1,e.row*ch+1,cw-2,ch-2);});
+  const{row,col}=wToG(CL.g.position.x,CL.g.position.z);mc.fillStyle='#00ffcc';mc.fillRect(col*cw+1,row*ch+1,cw-2,ch-2);
+}
+let ntT;
+function notify(t,d=3200){const el=document.getElementById('notif');el.textContent=t;el.style.display='block';clearTimeout(ntT);ntT=setTimeout(()=>el.style.display='none',d);}
+
+// ═══════════════════════════════════════════════
+//  ENCOUNTERS
+// ═══════════════════════════════════════════════
+function tryEnc(){
+  if(gs!=='playing'||encCooldown>0)return;
+  const px=CL.g.position.x,pz=CL.g.position.z;
+  for(const e of ENCS){
+    if(e.done||e._x===undefined)continue;
+    if(Math.hypot(px-e._x,pz-e._z)<2.8){doEnc(e);return;}
+  }
+}
+function doEnc(e){
+  encCooldown=80;
+  if(e.type==='dialog')showDlg(DIALOGS[e.id],()=>e.done=true);
+  else if(e.type==='puzzle')showPuzzle(PUZZLES[e.id],e);
+  else showBattle(BATTLES[e.id],e);
+}
+
+// ═══════════════════════════════════════════════
+//  DIALOG
+// ═══════════════════════════════════════════════
+function showDlg(data,cb){
+  gs='dialog';dlgCb=cb;
+  document.getElementById('dlg-who').textContent=data.who;
+  document.getElementById('dlg-txt').textContent=data.txt;
+  const cd=document.getElementById('dlg-choices');cd.innerHTML='';
+  data.ch.forEach(ch=>{
+    const b=document.createElement('button');b.className='cbtn';b.textContent=ch.t;
+    b.onclick=()=>{if(ch.a==='close')closeDlg();};cd.appendChild(b);
+  });
+  document.getElementById('dlg').style.display='block';
+}
+function closeDlg(){
+  document.getElementById('dlg').style.display='none';
+  hideSceneOverlay();
+  gs='playing';
+  if(dlgCb){dlgCb();dlgCb=null;}
+}
+
+// ═══════════════════════════════════════════════
+//  PUZZLE
+// ═══════════════════════════════════════════════
+function showPuzzle(data,enc){
+  gs='puzzle';
+  showSceneOverlay('puzzle',enc.id);
+  document.getElementById('dlg-who').textContent=data.who;
+  document.getElementById('dlg-txt').textContent=data.txt;
+  const cd=document.getElementById('dlg-choices');
+  function render(){
+    cd.innerHTML='';
+    data.ch.forEach(ch=>{
+      const b=document.createElement('button');b.className='cbtn';b.textContent=ch.t;
+      b.onclick=()=>{
+        if(ch.a==='ok'){
+          document.getElementById('dlg-txt').textContent=ch.fb;cd.innerHTML='';
+          const ok=document.createElement('button');ok.className='cbtn';ok.textContent='✨ Continua il viaggio';
+          ok.style.cssText='border-color:#00bb66;color:#00ffaa';
+          ok.onclick=()=>{
+            document.getElementById('dlg').style.display='none';
+            hideSceneOverlay();
+            gs='playing';
+            enc.done=true;
+            if(enc._mk)enc._mk.visible=false;
+            if(enc._gl)enc._gl.visible=false;
+            notify('✨ Tecnica appresa!');
+            setTimeout(()=>grantItemForEnc(enc.id),1200);
+          };
+          cd.appendChild(ok);
+        } else {
+          pHP=Math.max(1,pHP-(ch.cost||10));updateHUD();
+          document.getElementById('dlg-txt').textContent=ch.fb;cd.innerHTML='';
+          setTimeout(()=>{document.getElementById('dlg-txt').textContent=data.txt;render();},2600);
+        }
+      };cd.appendChild(b);
+    });
+  }
+  render();
+  document.getElementById('dlg').style.display='block';
+}
+
+// ═══════════════════════════════════════════════
+//  3D BATTLE ARENA RENDERER
+// ═══════════════════════════════════════════════
+let btlR=null,btlS=null,btlCam=null;
+let btlRafId=null,btlTick=0;
+let btlClompMesh=null,btlEnemyGroup=null,btlParticles=[];
+let btlFlashColor=null,btlFlashTimer=0;
+let btlClompAtkTimer=0,btlEnemyAtkTimer=0; // >0 = animating
+
+function initBtl3D(enemyId){
+  const canvas=document.getElementById('btl3d');
+  const arena=document.getElementById('btl-arena');
+  const W=arena.clientWidth,H=arena.clientHeight;
+
+  if(btlR){btlR.dispose();btlR=null;}
+  if(btlRafId){cancelAnimationFrame(btlRafId);btlRafId=null;}
+  btlParticles=[];btlTick=0;
+
+  btlR=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  btlR.setSize(W,H);btlR.setClearColor(0x000000,0);
+  btlR.shadowMap.enabled=true;
+
+  btlS=new THREE.Scene();
+  btlS.fog=new THREE.FogExp2(0x04000a,0.055);
+
+  btlCam=new THREE.PerspectiveCamera(55,W/H,0.1,100);
+  btlCam.position.set(0,2.5,9);btlCam.lookAt(0,1,0);
+
+  // Lighting
+  const amb=new THREE.AmbientLight(0x110022,1.2);btlS.add(amb);
+  const spot=new THREE.SpotLight(0xaa44ff,2,30,0.6,0.5,1);
+  spot.position.set(0,8,4);spot.castShadow=true;btlS.add(spot);
+  const backL=new THREE.PointLight(0xff0044,1.5,20);backL.position.set(4,3,-2);btlS.add(backL);
+  const frontL=new THREE.PointLight(0x0055ff,1.2,20);frontL.position.set(-4,2,4);btlS.add(frontL);
+
+  // Water floor
+  const floorGeo=new THREE.PlaneGeometry(20,10,12,8);
+  const floorMat=new THREE.MeshStandardMaterial({color:0x001133,roughness:.1,metalness:.9,transparent:true,opacity:.75});
+  const floor=new THREE.Mesh(floorGeo,floorMat);
+  floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;btlS.add(floor);
+
+  // Rock walls (left/right)
+  const rockMat=new THREE.MeshStandardMaterial({color:0x1a2a33,roughness:1,metalness:0});
+  [-9,9].forEach(x=>{
+    const rg=new THREE.BoxGeometry(1.5,6,10);
+    const rm=new THREE.Mesh(rg,rockMat);rm.position.set(x,2,0);btlS.add(rm);
+  });
+
+  // Floating particles (background ambience)
+  const partGeo=new THREE.BufferGeometry();
+  const partCount=60;const partPos=new Float32Array(partCount*3);
+  for(let i=0;i<partCount;i++){
+    partPos[i*3]=(Math.random()-.5)*16;
+    partPos[i*3+1]=Math.random()*5;
+    partPos[i*3+2]=(Math.random()-.5)*8;
+  }
+  partGeo.setAttribute('position',new THREE.BufferAttribute(partPos,3));
+  const partMat=new THREE.PointsMaterial({color:0x4444ff,size:.12,transparent:true,opacity:.6});
+  const parts=new THREE.Points(partGeo,partMat);btlS.add(parts);btlParticles.push(parts);
+
+  // ── CLOMP (left side) ──
+  btlClompMesh=buildBtlClomp();
+  btlClompMesh.position.set(-3.2,0,0);
+  btlClompMesh.rotation.y=0.4;
+  btlS.add(btlClompMesh);
+
+  // ── ENEMY (right side) ──
+  btlEnemyGroup=buildBtlEnemy(enemyId);
+  btlEnemyGroup.position.set(3.2,1.8,0);
+  btlS.add(btlEnemyGroup);
+
+  // Glow point under enemy
+  const enemyGlow=new THREE.PointLight(0xff0066,1.8,6);
+  enemyGlow.position.set(3.2,0,0);btlS.add(enemyGlow);
+  btlEnemyGroup.userData.glowLight=enemyGlow;
+
+  btlClompAtkTimer=0;btlEnemyAtkTimer=0;btlFlashTimer=0;
+
+  function btlLoop(){
+    btlRafId=requestAnimationFrame(btlLoop);
+    btlTick+=0.016;
+    const t=btlTick;
+
+    // Animate floor water
+    floor.material.opacity=.7+Math.sin(t*1.2)*.08;
+
+    // Animate particles
+    const pos=parts.geometry.attributes.position.array;
+    for(let i=0;i<partCount;i++){
+      pos[i*3+1]+=0.003;
+      if(pos[i*3+1]>5.5)pos[i*3+1]=0;
+    }
+    parts.geometry.attributes.position.needsUpdate=true;
+    parts.rotation.y=t*.04;
+
+    // Animate Clomp idle bob + attack lunge
+    if(btlClompAtkTimer>0){
+      btlClompAtkTimer-=0.016;
+      const prog=1-Math.max(0,btlClompAtkTimer)/0.45;
+      const lunge=Math.sin(prog*Math.PI)*2.2;
+      btlClompMesh.position.x=-3.2+lunge;
+      btlClompMesh.rotation.y=0.4-prog*0.6;
+    } else {
+      btlClompMesh.position.x=-3.2;
+      btlClompMesh.rotation.y=0.4;
+      btlClompMesh.position.y=Math.sin(t*1.6)*.12;
+    }
+
+    // Animate enemy group
+    animateBtlEnemy(btlEnemyGroup,t);
+
+    // Enemy attack recoil
+    if(btlEnemyAtkTimer>0){
+      btlEnemyAtkTimer-=0.016;
+      const prog=1-Math.max(0,btlEnemyAtkTimer)/0.4;
+      btlEnemyGroup.position.x=3.2-Math.sin(prog*Math.PI)*1.8;
+    } else {
+      btlEnemyGroup.position.x=3.2;
+    }
+
+    // Hit flash
+    if(btlFlashTimer>0){
+      btlFlashTimer-=0.016;
+      const fi=btlFlashTimer/0.3;
+      spot.color.setHex(btlFlashColor||0xaa44ff);
+      spot.intensity=2+fi*5;
+    } else {
+      spot.color.setHex(0xaa44ff);
+      spot.intensity=2;
+    }
+
+    // Enemy glow pulse
+    const gl=btlEnemyGroup.userData.glowLight;
+    if(gl)gl.intensity=1.5+Math.sin(t*2.5)*.7;
+
+    // Lights flicker
+    backL.intensity=1.4+Math.sin(t*1.1)*.3;
+    frontL.intensity=1.1+Math.sin(t*.9+1)*.3;
+
+    // Tick per-technique FX
+    btlFxTick(0.016);
+
+    btlR.render(btlS,btlCam);
+  }
+  btlLoop();
+}
+
+function buildBtlClomp(){
+  const g=new THREE.Group();
+  const skin=new THREE.MeshStandardMaterial({color:0xffcc99,roughness:.7});
+  const shirt=new THREE.MeshStandardMaterial({color:0x5522bb,roughness:.6,emissive:0x110055,emissiveIntensity:.3});
+  const hair=new THREE.MeshStandardMaterial({color:0x00aadd,roughness:.5,emissive:0x003344,emissiveIntensity:.4});
+  const pants=new THREE.MeshStandardMaterial({color:0xddc899,roughness:.8});
+  const shoe=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.5});
+  const roseMat=new THREE.MeshStandardMaterial({color:0xff7788,emissive:0x330011,emissiveIntensity:.3});
+  const glowM=new THREE.MeshStandardMaterial({color:0x00aaff,emissive:0x0066ff,emissiveIntensity:.7,transparent:true,opacity:.5});
+  const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=true;g.add(m);return m;};
+
+  // Body
+  add(new THREE.BoxGeometry(.9,1.1,.55),shirt,0,.55,0);
+  add(new THREE.BoxGeometry(.3,.3,.09),roseMat,0,.55,.29);
+  // Head
+  add(new THREE.BoxGeometry(.78,.72,.65),skin,0,1.25,0);
+  // Eyes
+  const eyeM=new THREE.MeshStandardMaterial({color:0x336644,emissive:0x112211});
+  add(new THREE.BoxGeometry(.14,.11,.06),eyeM,-.17,1.29,.34);
+  add(new THREE.BoxGeometry(.14,.11,.06),eyeM,.17,1.29,.34);
+  // Hair top
+  add(new THREE.BoxGeometry(.98,.82,.74),hair,0,1.65,-.04);
+  // Hair sides
+  const hL=add(new THREE.BoxGeometry(.28,1.2,.5),hair,-.55,1.08,-.04);
+  const hR=add(new THREE.BoxGeometry(.28,1.2,.5),hair,.55,1.08,-.04);
+  g.userData.hL=hL;g.userData.hR=hR;
+  // Legs
+  const lL=add(new THREE.BoxGeometry(.36,.88,.36),pants,-.24,-.45,0);
+  const lR=add(new THREE.BoxGeometry(.36,.88,.36),pants,.24,-.45,0);
+  g.userData.lL=lL;g.userData.lR=lR;
+  // Feet
+  add(new THREE.BoxGeometry(.38,.2,.48),shoe,-.24,-.9,.08);
+  add(new THREE.BoxGeometry(.38,.2,.48),shoe,.24,-.9,.08);
+  // Arms
+  const aL=add(new THREE.BoxGeometry(.26,.76,.26),shirt,-.6,.55,0);
+  const aR=add(new THREE.BoxGeometry(.26,.76,.26),shirt,.6,.55,0);
+  g.userData.aL=aL;g.userData.aR=aR;
+  // Swim glow
+  add(new THREE.CylinderGeometry(.9,.9,.15,16),glowM,0,-.87,0);
+  return g;
+}
+
+function buildBtlEnemy(id){
+  const g=new THREE.Group();
+  if(id==='critico'){
+    // Il Critico: floating mirror / eye
+    const mirrorMat=new THREE.MeshStandardMaterial({color:0x88aacc,roughness:.05,metalness:.95,envMapIntensity:1});
+    const frame=new THREE.Mesh(new THREE.TorusGeometry(1.1,.18,8,32),new THREE.MeshStandardMaterial({color:0x334455,roughness:.3,metalness:.8}));
+    g.add(frame);
+    const glass=new THREE.Mesh(new THREE.CircleGeometry(1,32),mirrorMat);
+    glass.position.z=.01;g.add(glass);
+    // Iris
+    const irisMat=new THREE.MeshStandardMaterial({color:0xff2244,emissive:0xaa0022,emissiveIntensity:.8});
+    const iris=new THREE.Mesh(new THREE.CircleGeometry(.38,24),irisMat);iris.position.z=.05;g.add(iris);
+    const pupilMat=new THREE.MeshStandardMaterial({color:0x000000});
+    const pupil=new THREE.Mesh(new THREE.CircleGeometry(.15,16),pupilMat);pupil.position.z=.09;g.add(pupil);
+    // Cracks
+    for(let i=0;i<6;i++){
+      const cg=new THREE.CylinderGeometry(.02,.02,.8+Math.random()*.4,4);
+      const cm=new THREE.Mesh(cg,new THREE.MeshStandardMaterial({color:0xff4466,emissive:0x880022,emissiveIntensity:.5}));
+      cm.rotation.z=Math.random()*Math.PI;cm.position.set((Math.random()-.5)*.8,(Math.random()-.5)*.8,.06);g.add(cm);
+    }
+    // Floating shards
+    for(let i=0;i<8;i++){
+      const sg=new THREE.TetrahedronGeometry(.12+Math.random()*.1);
+      const sm=new THREE.Mesh(sg,new THREE.MeshStandardMaterial({color:0xaaccff,roughness:.05,metalness:.9,transparent:true,opacity:.7}));
+      const angle=i/8*Math.PI*2;const r=1.4+Math.random()*.4;
+      sm.position.set(Math.cos(angle)*r,Math.sin(angle)*r,.2);
+      sm.userData.angle=angle;sm.userData.r=r;sm.userData.speed=.4+Math.random()*.3;
+      g.add(sm);g.userData.shards=g.userData.shards||[];g.userData.shards.push(sm);
+    }
+    g.userData.iris=iris;g.userData.type='critico';
+  } else if(id==='paura'){
+    // La Paura: dark pulsing void
+    const coreMat=new THREE.MeshStandardMaterial({color:0x110022,roughness:.9,metalness:0,emissive:0x220033,emissiveIntensity:.4});
+    const core=new THREE.Mesh(new THREE.IcosahedronGeometry(1,3),coreMat);
+    g.add(core);g.userData.core=core;
+    // Dark tendrils
+    for(let i=0;i<7;i++){
+      const tg=new THREE.CylinderGeometry(.04,.01,1.5+Math.random()*.8,4);
+      const tm=new THREE.Mesh(tg,new THREE.MeshStandardMaterial({color:0x220033,emissive:0x110022,emissiveIntensity:.3,transparent:true,opacity:.8}));
+      const angle=i/7*Math.PI*2;
+      tm.position.set(Math.cos(angle)*1.2,Math.sin(angle)*.8,Math.sin(angle+1)*.4);
+      tm.rotation.z=angle;
+      tm.userData.baseAngle=angle;tm.userData.idx=i;
+      g.add(tm);g.userData.tendrils=g.userData.tendrils||[];g.userData.tendrils.push(tm);
+    }
+    // Particle ring
+    const ringGeo=new THREE.BufferGeometry();
+    const ringPos=new Float32Array(40*3);
+    for(let i=0;i<40;i++){
+      const a=i/40*Math.PI*2,r=1.8+Math.random()*.5;
+      ringPos[i*3]=Math.cos(a)*r;ringPos[i*3+1]=Math.sin(a)*r*.4;ringPos[i*3+2]=Math.sin(a)*r*.3;
+    }
+    ringGeo.setAttribute('position',new THREE.BufferAttribute(ringPos,3));
+    const ring=new THREE.Points(ringGeo,new THREE.PointsMaterial({color:0x8800aa,size:.12,transparent:true,opacity:.7}));
+    g.add(ring);g.userData.ring=ring;
+    g.userData.type='paura';
+  } else {
+    // Boss: Il Grande Condizionamento — nested rotating rings + core
+    const coreMat=new THREE.MeshStandardMaterial({color:0x330066,roughness:.2,metalness:.7,emissive:0x220044,emissiveIntensity:.6});
+    const core=new THREE.Mesh(new THREE.OctahedronGeometry(.7,2),coreMat);
+    g.add(core);g.userData.core=core;
+    // 3 rings (different colors per form)
+    const ringColors=[0xff00cc,0xcc4400,0x8800ff];
+    const rings=[];
+    ringColors.forEach((col,i)=>{
+      const rg=new THREE.TorusGeometry(1.1+i*.4,.07,8,48);
+      const rm=new THREE.Mesh(rg,new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:.5,roughness:.3,metalness:.5}));
+      rm.rotation.x=(i/3)*Math.PI*.6;rm.rotation.y=(i/3)*Math.PI*.4;
+      g.add(rm);rings.push(rm);
+    });
+    g.userData.rings=rings;
+    // Floating runes
+    for(let i=0;i<12;i++){
+      const rg=new THREE.BoxGeometry(.08,.18,.04);
+      const rm=new THREE.Mesh(rg,new THREE.MeshStandardMaterial({color:0xffaaff,emissive:0xaa00aa,emissiveIntensity:.8}));
+      const angle=i/12*Math.PI*2;const r=2+Math.random()*.3;
+      rm.position.set(Math.cos(angle)*r,Math.sin(angle)*r*.5,(Math.random()-.5)*.6);
+      rm.userData.angle=angle;rm.userData.r=r;
+      g.add(rm);g.userData.runes=g.userData.runes||[];g.userData.runes.push(rm);
+    }
+    g.userData.type='boss';
+  }
+  return g;
+}
+
+function animateBtlEnemy(g,t){
+  if(!g)return;
+  const type=g.userData.type;
+  if(type==='critico'){
+    g.rotation.y=Math.sin(t*.5)*.3;
+    g.rotation.z=Math.sin(t*.3)*.08;
+    g.position.y=1.8+Math.sin(t*1.4)*.18;
+    if(g.userData.iris)g.userData.iris.scale.setScalar(.9+Math.sin(t*3)*.15);
+    if(g.userData.shards)g.userData.shards.forEach((s,i)=>{
+      const a=s.userData.angle+t*s.userData.speed;
+      s.position.set(Math.cos(a)*s.userData.r,Math.sin(a)*s.userData.r,.2);
+      s.rotation.y=t*(1+i*.1);
+    });
+  } else if(type==='paura'){
+    if(g.userData.core){
+      const sc=1+Math.sin(t*2)*.12;
+      g.userData.core.scale.setScalar(sc);
+      g.userData.core.rotation.x=t*.4;g.userData.core.rotation.y=t*.3;
+    }
+    if(g.userData.tendrils)g.userData.tendrils.forEach((td,i)=>{
+      const a=td.userData.baseAngle+t*.6+i*.2;
+      td.position.x=Math.cos(a)*1.2;td.position.y=Math.sin(a+i)*.9;
+      td.rotation.z=a;
+    });
+    if(g.userData.ring)g.userData.ring.rotation.z=t*.5;
+    g.position.y=1.8+Math.sin(t*1.8)*.25;
+  } else if(type==='boss'){
+    if(g.userData.core){g.userData.core.rotation.x=t*.5;g.userData.core.rotation.y=t*.7;}
+    if(g.userData.rings){
+      g.userData.rings[0].rotation.z=t*.8;
+      g.userData.rings[1].rotation.x=t*.6;
+      g.userData.rings[2].rotation.y=t*.9;
+    }
+    if(g.userData.runes)g.userData.runes.forEach((r,i)=>{
+      const a=r.userData.angle+t*.4;
+      r.position.set(Math.cos(a)*r.userData.r,Math.sin(a)*r.userData.r*.5,(Math.sin(t+i))*.4);
+      r.rotation.y=t;
+    });
+    g.position.y=1.8+Math.sin(t*.9)*.2;
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  PER-TECHNIQUE 3D FX SYSTEM
+// ═══════════════════════════════════════════════
+let btlFxQueue=[];  // active effects: {life,maxLife,meshes:[],update(self,dt)}
+
+function btlFxTick(dt){
+  btlFxQueue=btlFxQueue.filter(fx=>{
+    fx.life+=dt;
+    const t=Math.min(fx.life/fx.maxLife,1);
+    fx.update(fx,t,dt);
+    if(t>=1){fx.meshes.forEach(m=>{btlS&&btlS.remove(m);m.geometry&&m.geometry.dispose();});return false;}
+    return true;
+  });
+}
+
+function spawnFx(maxLife,buildFn,updateFn){
+  if(!btlS)return;
+  const fx={life:0,maxLife,meshes:[]};
+  buildFn(fx);
+  fx.update=updateFn;
+  btlFxQueue.push(fx);
+}
+
+function mkFxMat(color,emissive,opacity=1,transparent=false){
+  return new THREE.MeshStandardMaterial({color,emissive:emissive||color,emissiveIntensity:.8,roughness:.3,metalness:.4,transparent,opacity});
+}
+
+// ── PAR: Accordo Paradossale ──────────────────
+// Gold mirror wave: a ring pulses from Clomp toward enemy, then folds back
+// Enemy gets a brief gold shimmer overlay; Clomp opens arms wide
+function fxPar(){
+  btlClompAtkTimer=-1; // custom — handled by FX
+  btlFlashColor=0xffdd44;btlFlashTimer=0.55;
+
+  // Expanding torus ring (gold)
+  spawnFx(0.9,
+    fx=>{
+      const geo=new THREE.TorusGeometry(.01,.08,8,40);
+      const mat=mkFxMat(0xffdd44,0xffaa00,.9,true);
+      const m=new THREE.Mesh(geo,mat);
+      m.rotation.x=Math.PI/2;
+      m.position.set(-3.2,1,0);
+      btlS.add(m);fx.meshes.push(m);
+      fx.m=m;fx.mat=mat;
+    },
+    (fx,t)=>{
+      const ease=t<.5?t*2:2-t*2; // expand then contract
+      fx.m.scale.setScalar(1+ease*5);
+      fx.m.position.x=-3.2+ease*6.4; // moves toward enemy
+      fx.mat.opacity=.9*(1-t);
+      fx.m.rotation.z+=.08;
+    }
+  );
+  // Gold particle burst (diamonds) from Clomp
+  spawnFx(1.0,
+    fx=>{
+      for(let i=0;i<14;i++){
+        const geo=new THREE.OctahedronGeometry(.09,0);
+        const mat=mkFxMat(0xffee66,0xffaa00,.85,true);
+        const m=new THREE.Mesh(geo,mat);
+        m.position.set(-3.2+Math.random()*.4,1+Math.random()*.5,Math.random()-.5);
+        const angle=Math.random()*Math.PI*2;const spd=1.5+Math.random()*2;
+        m.userData.vx=Math.cos(angle)*spd;m.userData.vy=.8+Math.random()*1.2;m.userData.vz=Math.sin(angle)*.6;
+        btlS.add(m);fx.meshes.push(m);fx.mats=fx.mats||[];fx.mats.push(mat);
+      }
+    },
+    (fx,t)=>{
+      const dt2=.016;
+      fx.meshes.forEach((m,i)=>{
+        m.position.x+=m.userData.vx*dt2;
+        m.position.y+=m.userData.vy*dt2;m.userData.vy-=2.5*dt2;
+        m.position.z+=m.userData.vz*dt2;
+        m.rotation.y+=.1;m.rotation.x+=.07;
+        fx.mats[i].opacity=.85*(1-t*t);
+      });
+    }
+  );
+  // Clomp animation: arms spread wide, slight backward tilt then forward
+  spawnFx(0.9,
+    fx=>{fx.startX=btlClompMesh?btlClompMesh.position.x:-3.2;},
+    (fx,t)=>{
+      if(!btlClompMesh)return;
+      const arc=Math.sin(t*Math.PI);
+      if(btlClompMesh.userData.aL)btlClompMesh.userData.aL.rotation.z=-arc*.9;
+      if(btlClompMesh.userData.aR)btlClompMesh.userData.aR.rotation.z= arc*.9;
+      btlClompMesh.position.y=arc*.4;
+      btlClompMesh.rotation.y=.4+arc*-.5;
+      if(t>=.99){
+        if(btlClompMesh.userData.aL)btlClompMesh.userData.aL.rotation.z=0;
+        if(btlClompMesh.userData.aR)btlClompMesh.userData.aR.rotation.z=0;
+      }
+    }
+  );
+  // Mirror glint on enemy
+  spawnFx(0.7,
+    fx=>{
+      const geo=new THREE.PlaneGeometry(2.8,2.8);
+      const mat=new THREE.MeshStandardMaterial({color:0xffffcc,emissive:0xffee88,emissiveIntensity:1.5,transparent:true,opacity:.0,side:THREE.DoubleSide});
+      const m=new THREE.Mesh(geo,mat);m.position.set(3.2,1.8,-.1);btlS.add(m);
+      fx.meshes.push(m);fx.mat=mat;
+    },
+    (fx,t)=>{fx.mat.opacity=t<.3?t/.3*.45:(.45*(1-(t-.3)/.7));}
+  );
+}
+
+// ── RIS: Ristrutturazione Cognitiva ───────────
+// Blue geometric reframe: rotating cubes bridge Clomp→enemy, dissolve.
+// Clomp tilts head, deliberate slow gesture.
+function fxRis(){
+  btlFlashColor=0x2299ff;btlFlashTimer=0.45;
+
+  // Rotating cubes arc from Clomp to enemy
+  spawnFx(1.1,
+    fx=>{
+      fx.cubes=[];fx.mats=[];
+      for(let i=0;i<10;i++){
+        const geo=new THREE.BoxGeometry(.22,.22,.22);
+        const mat=mkFxMat(0x44aaff,0x0055cc,.8,true);
+        const m=new THREE.Mesh(geo,mat);
+        btlS.add(m);fx.meshes.push(m);fx.cubes.push(m);fx.mats.push(mat);
+        m.userData.delay=i/10*.5;
+      }
+    },
+    (fx,t)=>{
+      fx.cubes.forEach((c,i)=>{
+        const lt=Math.max(0,(t-c.userData.delay)/.6);
+        const prog=Math.min(lt,1);
+        // Arc path from Clomp(-3.2,1,0) to enemy(3.2,1.8,0)
+        c.position.x=-3.2+prog*6.4;
+        c.position.y=1+Math.sin(prog*Math.PI)*.8+prog*.8;
+        c.position.z=Math.sin(prog*Math.PI+i)*.4;
+        c.rotation.x+=.12;c.rotation.y+=.09;c.rotation.z+=.07;
+        fx.mats[i].opacity=prog<.9?.8:.8*(1-(prog-.9)/.1);
+      });
+    }
+  );
+  // Soft blue halo around Clomp head
+  spawnFx(1.0,
+    fx=>{
+      const geo=new THREE.TorusGeometry(.55,.04,8,32);
+      const mat=mkFxMat(0x88ccff,0x4488ff,.7,true);
+      const m=new THREE.Mesh(geo,mat);
+      m.position.set(-3.2,1.55,0);m.rotation.x=Math.PI/2;
+      btlS.add(m);fx.meshes.push(m);fx.m=m;fx.mat=mat;
+    },
+    (fx,t)=>{
+      fx.m.rotation.y+=.07;
+      const sc=1+Math.sin(t*Math.PI)*.25;
+      fx.m.scale.setScalar(sc);
+      fx.mat.opacity=.7*Math.sin(t*Math.PI);
+    }
+  );
+  // Clomp: slow deliberate tilt-and-point
+  spawnFx(1.1,
+    fx=>{},
+    (fx,t)=>{
+      if(!btlClompMesh)return;
+      const arc=Math.sin(t*Math.PI);
+      btlClompMesh.rotation.z=arc*.18; // head tilt
+      btlClompMesh.position.x=-3.2+arc*.6; // step forward
+      if(btlClompMesh.userData.aR)btlClompMesh.userData.aR.rotation.z=-arc*.6; // point right arm
+      if(t>=.99){btlClompMesh.rotation.z=0;if(btlClompMesh.userData.aR)btlClompMesh.userData.aR.rotation.z=0;}
+    }
+  );
+}
+
+// ── PRE: Prescrizione del Sintomo ─────────────
+// Green cage forms around enemy, locks it, pulses, dissolves.
+// Clomp does a "clock-setting" gesture with arms.
+function fxPre(){
+  btlFlashColor=0x00cc88;btlFlashTimer=0.5;
+
+  // Green bounding cage around enemy
+  spawnFx(1.3,
+    fx=>{
+      const edges=new THREE.EdgesGeometry(new THREE.BoxGeometry(2.4,3.2,2));
+      const mat=new THREE.LineBasicMaterial({color:0x00ff99,transparent:true,opacity:0});
+      const cage=new THREE.LineSegments(edges,mat);
+      cage.position.set(3.2,1.8,0);
+      btlS.add(cage);fx.meshes.push(cage);fx.cage=cage;fx.mat=mat;
+    },
+    (fx,t)=>{
+      // Build in, hold, dissolve
+      if(t<.2)fx.mat.opacity=t/.2*.9;
+      else if(t<.75)fx.mat.opacity=.9;
+      else fx.mat.opacity=.9*(1-(t-.75)/.25);
+      // Pulse scale
+      const pulse=1+Math.sin(t*Math.PI*6)*.05;
+      fx.cage.scale.setScalar(pulse);
+      fx.cage.rotation.y+=.015;
+    }
+  );
+  // Green clock-face plane
+  spawnFx(1.0,
+    fx=>{
+      const geo=new THREE.RingGeometry(.3,.45,32);
+      const mat=new THREE.MeshStandardMaterial({color:0x00ff99,emissive:0x00cc66,emissiveIntensity:1,transparent:true,opacity:0,side:THREE.DoubleSide});
+      const m=new THREE.Mesh(geo,mat);
+      m.position.set(-3.2,1.4,.3);
+      btlS.add(m);fx.meshes.push(m);fx.m=m;fx.mat=mat;
+      // Clock hand
+      const hg=new THREE.CylinderGeometry(.03,.01,.35,4);
+      const hm=new THREE.Mesh(hg,new THREE.MeshStandardMaterial({color:0x00ffcc,emissive:0x00cc99,emissiveIntensity:1,transparent:true,opacity:0}));
+      hm.position.set(-3.2,1.55,.31);
+      btlS.add(hm);fx.meshes.push(hm);fx.hand=hm;fx.handMat=hm.material;
+    },
+    (fx,t)=>{
+      const op=Math.sin(t*Math.PI);
+      fx.mat.opacity=op*.8;fx.handMat.opacity=op*.9;
+      fx.m.rotation.z-=.12; // spin clockface
+      fx.hand.rotation.z-=.22; // hand spins faster
+    }
+  );
+  // Green tick particles falling like a schedule grid
+  spawnFx(1.2,
+    fx=>{
+      fx.ticks=[];fx.mats=[];
+      for(let i=0;i<12;i++){
+        const geo=new THREE.BoxGeometry(.08,.15,.04);
+        const mat=mkFxMat(0x00ee88,0x00aa55,.7,true);
+        const m=new THREE.Mesh(geo,mat);
+        m.position.set(-1.5+i*.55,3.5+Math.random()*.5,(Math.random()-.5)*.6);
+        m.userData.delay=i*.06;
+        btlS.add(m);fx.meshes.push(m);fx.ticks.push(m);fx.mats.push(mat);
+      }
+    },
+    (fx,t)=>{
+      fx.ticks.forEach((m,i)=>{
+        const lt=Math.max(0,t-m.userData.delay/.8);
+        m.position.y-=.04;
+        fx.mats[i].opacity=.7*(1-lt);
+      });
+    }
+  );
+  // Clomp: arms trace a circle (prescribing the schedule)
+  spawnFx(1.1,
+    fx=>{},
+    (fx,t)=>{
+      if(!btlClompMesh)return;
+      const arc=Math.sin(t*Math.PI);
+      if(btlClompMesh.userData.aL){btlClompMesh.userData.aL.rotation.x=-arc*.8;btlClompMesh.userData.aL.rotation.z=-arc*.4;}
+      if(btlClompMesh.userData.aR){btlClompMesh.userData.aR.rotation.x=-arc*.8;btlClompMesh.userData.aR.rotation.z= arc*.4;}
+      btlClompMesh.position.y=arc*.15;
+      if(t>=.99){['aL','aR'].forEach(k=>{if(btlClompMesh.userData[k]){btlClompMesh.userData[k].rotation.x=0;btlClompMesh.userData[k].rotation.z=0;}});}
+    }
+  );
+}
+
+// ── PEG: Catastrofizzazione ───────────────────
+// Dark storm erupts dramatically — then POPS into grey dust (the anticlimax).
+function fxPeg(){
+  btlFlashColor=0xcc2200;btlFlashTimer=0.35;
+
+  // Phase 1: dramatic dark explosion (red-black shards)
+  spawnFx(0.55,
+    fx=>{
+      fx.shards=[];fx.mats=[];
+      for(let i=0;i<22;i++){
+        const geo=new THREE.TetrahedronGeometry(.1+Math.random()*.18,0);
+        const col=i%2===0?0xcc1100:0x440000;
+        const mat=mkFxMat(col,col,.9,true);
+        const m=new THREE.Mesh(geo,mat);
+        m.position.set(0,1.5,0);
+        const angle=Math.random()*Math.PI*2;const elev=(Math.random()-.3)*Math.PI;const spd=3+Math.random()*4;
+        m.userData.vx=Math.cos(angle)*Math.cos(elev)*spd;
+        m.userData.vy=Math.sin(elev)*spd+1;
+        m.userData.vz=Math.sin(angle)*Math.cos(elev)*spd*.5;
+        btlS.add(m);fx.meshes.push(m);fx.shards.push(m);fx.mats.push(mat);
+      }
+    },
+    (fx,t)=>{
+      const dt2=.016;
+      fx.shards.forEach((m,i)=>{
+        m.position.x+=m.userData.vx*dt2;m.position.y+=m.userData.vy*dt2;m.userData.vy-=6*dt2;m.position.z+=m.userData.vz*dt2;
+        m.rotation.x+=.15;m.rotation.y+=.12;
+        fx.mats[i].opacity=.9*(1-t*t);
+      });
+    }
+  );
+  // Phase 2: POOF — grey boring dust that just hangs there (the anticlimax is the point)
+  spawnFx(1.4,
+    fx=>{
+      fx.dust=[];fx.mats=[];
+      for(let i=0;i<30;i++){
+        const geo=new THREE.SphereGeometry(.08+Math.random()*.07,4,4);
+        const grey=0x556655+Math.floor(Math.random()*0x111111);
+        const mat=mkFxMat(grey,grey,.5,true);
+        const m=new THREE.Mesh(geo,mat);
+        const angle=Math.random()*Math.PI*2;const r=1+Math.random()*2.5;
+        m.position.set(Math.cos(angle)*r,1.2+Math.random()*.6,Math.sin(angle)*r*.4);
+        m.userData.vy=-.04+Math.random()*.02;
+        btlS.add(m);fx.meshes.push(m);fx.dust.push(m);fx.mats.push(mat);
+      }
+    },
+    (fx,t)=>{
+      // Fade in after 0.35s, hold, then fade out
+      fx.dust.forEach((m,i)=>{
+        m.position.y+=m.userData.vy;
+        m.userData.vy-=.0003;
+        const op=t<.35?0:t<.55?(t-.35)/.2*.45:.45*(1-(t-.55)/.45);
+        fx.mats[i].opacity=Math.max(0,op);
+      });
+    }
+  );
+  // Clomp: big dramatic wind-up, then slumps (boredom of the result)
+  spawnFx(1.2,
+    fx=>{},
+    (fx,t)=>{
+      if(!btlClompMesh)return;
+      if(t<.3){
+        // Wind-up: both arms UP
+        const p=t/.3;
+        if(btlClompMesh.userData.aL)btlClompMesh.userData.aL.rotation.x=-p*1.2;
+        if(btlClompMesh.userData.aR)btlClompMesh.userData.aR.rotation.x=-p*1.2;
+        btlClompMesh.rotation.z=p*.12;
+      } else if(t<.55){
+        // STRIKE — lunge forward
+        const p=(t-.3)/.25;btlClompMesh.position.x=-3.2+p*2.5;btlClompMesh.position.y=-p*.2;
+      } else {
+        // Settle — return to normal, slight shrug
+        const p=(t-.55)/.45;btlClompMesh.position.x=-3.2+2.5*(1-p);btlClompMesh.position.y=-Math.sin(p*Math.PI)*.1;
+        if(btlClompMesh.userData.aL)btlClompMesh.userData.aL.rotation.x=-1.2*(1-p);
+        if(btlClompMesh.userData.aR)btlClompMesh.userData.aR.rotation.x=-1.2*(1-p);
+        if(p>=.99){
+          btlClompMesh.rotation.z=0;
+          ['aL','aR'].forEach(k=>{if(btlClompMesh.userData[k]){btlClompMesh.userData[k].rotation.x=0;}});
+        }
+      }
+    }
+  );
+}
+
+// ── ESP: Esposizione Volontaria ───────────────
+// Clomp marches STRAIGHT toward the enemy — bright white light grows.
+// Enemy's dark aura shrinks. White orbs expand then contract inward.
+function fxEsp(){
+  btlFlashColor=0xffffff;btlFlashTimer=0.6;
+
+  // Clomp: confident march forward, bigger lunge than normal
+  spawnFx(0.9,
+    fx=>{},
+    (fx,t)=>{
+      if(!btlClompMesh)return;
+      const ease=t<.6?t/.6:1-(t-.6)/.4;
+      btlClompMesh.position.x=-3.2+ease*4.8;
+      btlClompMesh.position.y=Math.abs(Math.sin(t*Math.PI*3))*.15; // walking bob
+      btlClompMesh.rotation.y=.4-ease*.7;
+      // March arms
+      if(btlClompMesh.userData.aL)btlClompMesh.userData.aL.rotation.x=Math.sin(t*Math.PI*4)*.5;
+      if(btlClompMesh.userData.aR)btlClompMesh.userData.aR.rotation.x=-Math.sin(t*Math.PI*4)*.5;
+      if(t>=.99){btlClompMesh.rotation.y=.4;['aL','aR'].forEach(k=>{if(btlClompMesh.userData[k])btlClompMesh.userData[k].rotation.x=0;});}
+    }
+  );
+  // Growing white orbs that expand then implode toward enemy
+  spawnFx(1.0,
+    fx=>{
+      fx.orbs=[];fx.mats=[];
+      for(let i=0;i<12;i++){
+        const geo=new THREE.SphereGeometry(.12,8,8);
+        const mat=new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xddffff,emissiveIntensity:1.2,transparent:true,opacity:0});
+        const m=new THREE.Mesh(geo,mat);
+        const angle=i/12*Math.PI*2;const r=1.2;
+        m.position.set(-3.2+Math.cos(angle)*r,1+Math.sin(angle)*r,.3);
+        m.userData.angle=angle;m.userData.r=r;m.userData.idx=i;
+        btlS.add(m);fx.meshes.push(m);fx.orbs.push(m);fx.mats.push(mat);
+      }
+    },
+    (fx,t)=>{
+      fx.orbs.forEach((m,i)=>{
+        const delay=i/12*.25;const lt=Math.max(0,t-delay);
+        // orbit and spiral inward toward enemy
+        const a=m.userData.angle+t*1.5;
+        const r=m.userData.r*(1-t*.7);
+        const cx=t<.5?-3.2:(-3.2+(t-.5)*13); // target moves toward enemy
+        m.position.x=cx+Math.cos(a)*r;m.position.y=1+Math.sin(a)*r;
+        const op=lt<.2?lt/.2:lt>.85?(1-lt)/.15:1;
+        fx.mats[i].opacity=Math.min(1,op)*.7;
+        m.scale.setScalar(.5+t*.5);
+      });
+    }
+  );
+  // Shrink enemy aura (visual only)
+  spawnFx(0.9,
+    fx=>{},
+    (fx,t)=>{
+      if(!btlEnemyGroup)return;
+      const shrink=1-Math.sin(t*Math.PI)*.35;
+      btlEnemyGroup.scale.setScalar(shrink);
+      if(t>=.99)btlEnemyGroup.scale.setScalar(1);
+    }
+  );
+  // Expanding white ring from Clomp center
+  spawnFx(0.7,
+    fx=>{
+      const geo=new THREE.TorusGeometry(.01,.06,8,40);
+      const mat=new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xffffff,emissiveIntensity:2,transparent:true,opacity:.9});
+      const m=new THREE.Mesh(geo,mat);m.rotation.x=Math.PI/2;m.position.set(-3.2,1,0);
+      btlS.add(m);fx.meshes.push(m);fx.m=m;fx.mat=mat;
+    },
+    (fx,t)=>{fx.m.scale.setScalar(1+t*9);fx.mat.opacity=.9*(1-t);}
+  );
+}
+
+// Dispatch technique → FX
+function btlAnimatePlayerAtk(actId){
+  if(!btlS)return;
+  switch(actId){
+    case 'par': fxPar(); break;
+    case 'ris': fxRis(); break;
+    case 'pre': fxPre(); break;
+    case 'peg': fxPeg(); break;
+    case 'esp': fxEsp(); break;
+    default:    btlClompAtkTimer=0.45; // fallback generic lunge
+  }
+}
+function btlAnimateEnemyAtk(){btlEnemyAtkTimer=0.40;btlFlashColor=0xff2200;btlFlashTimer=0.3;}
+function btlAnimatePhaseChange(){btlFlashColor=0xcc44ff;btlFlashTimer=0.6;}
+function btlAnimateVictory(){btlFlashColor=0x00ffaa;btlFlashTimer=1.0;}
+
+function stopBtl3D(){
+  if(btlRafId){cancelAnimationFrame(btlRafId);btlRafId=null;}
+  btlFxQueue.forEach(fx=>fx.meshes.forEach(m=>{m.geometry&&m.geometry.dispose();}));
+  btlFxQueue=[];
+  if(btlR){btlR.dispose();btlR=null;}
+  btlS=null;btlCam=null;btlClompMesh=null;btlEnemyGroup=null;btlParticles=[];
+}
+
+window.addEventListener('resize',()=>{
+  if(btlR&&btlS&&btlCam){
+    const arena=document.getElementById('btl-arena');
+    const W=arena.clientWidth,H=arena.clientHeight;
+    btlR.setSize(W,H);btlCam.aspect=W/H;btlCam.updateProjectionMatrix();
+  }
+});
+
+// ═══════════════════════════════════════════════
+//  TYPEWRITER DIALOG ENGINE
+// ═══════════════════════════════════════════════
+const TW={
+  slides:[],   // [{type,who,text}]
+  idx:0,
+  charIdx:0,
+  timer:null,
+  onDone:null,
+  speed:14,    // ms per char
+  active:false,
+};
+
+const twDlg   =document.getElementById('tw-dlg');
+const twWho   =document.getElementById('tw-who');
+const twContent=document.getElementById('tw-content');
+const twCursor =document.getElementById('tw-cursor');
+const twNextBtn=document.getElementById('tw-next');
+const twCounter=document.getElementById('tw-counter');
+
+function twShow(slides, onDone){
+  // Guard: se già attivo, chiudi silenziosamente il precedente prima di aprire
+  if(TW.active){
+    if(TW.timer){clearInterval(TW.timer);TW.timer=null;}
+    TW.active=false;TW.onDone=null;
+  }
+  if(!slides||slides.length===0){onDone&&onDone();return;}
+  TW.slides=slides;TW.idx=0;TW.onDone=onDone;TW.active=true;
+  // Reset contenuto prima di rendere visibile
+  twContent.textContent='';
+  twNextBtn.classList.remove('ready');
+  // Mostra il dialog — l'animazione parte automaticamente via CSS su .active
+  twDlg.classList.add('active');
+  requestAnimationFrame(()=>twShowSlide(0));
+}
+
+function twShowSlide(idx){
+  if(!TW.active)return;  // guard: non procedere se il dialog è stato chiuso
+  const slide=TW.slides[idx];
+  if(!slide){twClose();return;}
+  TW.idx=idx;TW.charIdx=0;
+  twWho.className='';twWho.classList.add('tw-'+slide.type);
+  twWho.textContent=slide.who||'';
+  twWho.style.display=slide.who?'block':'none';
+  twCounter.textContent=`${idx+1} / ${TW.slides.length}`;
+  twContent.textContent='';
+  twNextBtn.classList.remove('ready');
+  if(TW.timer)clearInterval(TW.timer);
+  const text=slide.text||'';
+  if(!text){
+    // Slide senza testo: mostra subito il bottone avanti
+    twNextBtn.classList.add('ready');
+    return;
+  }
+  TW.timer=setInterval(()=>{
+    if(!TW.active){clearInterval(TW.timer);TW.timer=null;return;}
+    if(TW.charIdx<text.length){
+      twContent.textContent=text.slice(0,++TW.charIdx);
+    } else {
+      clearInterval(TW.timer);TW.timer=null;
+      twNextBtn.classList.add('ready');
+    }
+  },TW.speed);
+}
+
+function twNext(){
+  if(!TW.active)return;
+  if(TW.timer){
+    clearInterval(TW.timer);TW.timer=null;
+    twContent.textContent=TW.slides[TW.idx].text||'';
+    twNextBtn.classList.add('ready');
+    return;
+  }
+  const next=TW.idx+1;
+  if(next>=TW.slides.length){twClose();}
+  else{twShowSlide(next);}
+}
+
+function twSkipAll(){
+  if(TW.timer){clearInterval(TW.timer);TW.timer=null;}
+  twClose();
+}
+
+function twClose(){
+  if(TW.timer){clearInterval(TW.timer);TW.timer=null;}
+  TW.active=false;
+  twDlg.classList.remove('active');
+  twContent.textContent='';
+  twNextBtn.classList.remove('ready');
+  const cb=TW.onDone;TW.onDone=null;
+  cb&&cb();
+}
+
+// Space / Enter advances typewriter when active
+document.addEventListener('keydown',e=>{
+  if(!TW.active)return;
+  if(e.code==='Space'||e.code==='Enter'){e.preventDefault();twNext();}
+});
+
+// ═══════════════════════════════════════════════
+//  BATTLE ENGINE
+// ═══════════════════════════════════════════════
+function showBattle(def,enc){
+  gs='battle';
+  showSceneOverlay('battle');
+  const b={
+    d:{...def,hp:def.maxHp},enc,
+    currentPhase:-1,
+    phaseImmune:new Set(),parCost:0,bonusParadox:false,
+    draining:false,repMemory:[],avoidCount:0,
+    skipTurns:0,identityTimer:0,pendingIdentity:false,parRequired:false,
+  };
+  curBattle=b;
+  // Hide world HUD
+  document.getElementById('hud').style.display='none';
+  document.getElementById('minimap').style.display='none';
+  document.getElementById('hint').style.display='none';
+  document.getElementById('touch-controls').style.display='none';
+
+  document.getElementById('btl-ename').textContent=`${def.emoji} ${def.name}`;
+  document.getElementById('btl-challenge').style.display='none';
+  document.getElementById('cont-btn').style.display='none';
+  document.getElementById('cont-btn').textContent='Continua →';
+  document.getElementById('btl').style.display='flex';
+  clearBtlLog();
+  logMsg(def.intro,'system','📜 Incontro');
+  enterPhase(b,0);
+  renderBtlUI();buildActBtns(b);
+  bTurn='player';bWait=false;
+  // Init 3D arena after layout is visible (so clientWidth is valid)
+  requestAnimationFrame(()=>initBtl3D(enc.id));
+}
+
+function enterPhase(b,idx){
+  if(idx<=b.currentPhase)return;
+  b.currentPhase=idx;
+  const ph=b.d.phases[idx];
+  document.getElementById('btl-phase').textContent=ph.label;
+  document.getElementById('btl-phase').style.color=ph.col;
+  if(ph.onEnter){
+    const msg=ph.onEnter(b);
+    if(b.challenge){
+      document.getElementById('btl-challenge-title').textContent='⚡ '+b.challenge.title;
+      document.getElementById('btl-challenge-txt').textContent=b.challenge.txt;
+      document.getElementById('btl-challenge').style.display='block';
+    }
+    if(msg)setTimeout(()=>{logSep();logMsg(msg,'phase','🌀 Trasformazione');scrollBtlToBottom();btlAnimatePhaseChange();},200);
+  }
+  buildActBtns(b);
+}
+
+function renderBtlUI(){
+  if(!curBattle)return;
+  const{d}=curBattle;
+  document.getElementById('ehb').style.width=Math.max(0,d.hp/d.maxHp*100)+'%';
+  document.getElementById('ehp-t').textContent=`${Math.max(0,d.hp)}/${d.maxHp}`;
+  document.getElementById('bphb').style.width=Math.max(0,pHP/pMax*100)+'%';
+  document.getElementById('bph-t').textContent=`${Math.max(0,pHP)}/${pMax}`;
+  updateHUD();
+  const eb=document.getElementById('enemy-badges');eb.innerHTML='';
+  const ph=d.phases[curBattle.currentPhase];
+  if(ph){const b1=document.createElement('span');b1.className='ebadge eb-fase';b1.textContent=ph.label.split('—')[0].trim();eb.appendChild(b1);}
+  if(d.hp/d.maxHp<0.3){const b2=document.createElement('span');b2.className='ebadge eb-furia';b2.textContent='FASE CRITICA';eb.appendChild(b2);}
+  if(curBattle.parRequired){const b3=document.createElement('span');b3.className='ebadge eb-immune';b3.textContent='⚡ Richiede ACCORDO PARADOSSALE';eb.appendChild(b3);}
+}
+
+function buildActBtns(b){
+  const ac=document.getElementById('btl-acts');ac.innerHTML='';
+  b.d.acts.forEach(a=>{
+    const isHalf=b.phaseImmune&&b.phaseImmune.has(a.id);
+    const dmg=isHalf?Math.floor(a.baseDmg/2):a.baseDmg;
+    const btn=document.createElement('button');btn.className='abtn'+(isHalf?' dimmed':'');btn.id='ab-'+a.id;
+    btn.innerHTML=`<span class="abn">${a.n}</span><span class="abd">${a.d}</span><span class="abcost">~${dmg}⚡</span>`+(isHalf?'<span class="abwarn">↓ dimezzato</span>':'');
+    if(hasStatus('blocco')&&a.tag==='par')btn.disabled=true;
+    // rispetta lo stato del motore di battaglia
+    if(bWait||bTurn!=='player')btn.disabled=true;
+    btn.onclick=()=>playerAct(a,b);
+    ac.appendChild(btn);
+  });
+}
+
+function scrollBtlToBottom(){
+  const el=document.getElementById('btl-msg');
+  el.scrollTop=el.scrollHeight;
+  document.getElementById('btl-scroll-hint').style.display='none';
+}
+function logMsg(text,type='system',who=null){
+  const el=document.getElementById('btl-msg');
+  const entry=document.createElement('div');
+  entry.className='log-entry log-'+type;
+  if(who){const w=document.createElement('span');w.className='log-who';w.textContent=who;entry.appendChild(w);}
+  const body=document.createElement('span');body.textContent=text;entry.appendChild(body);
+  el.appendChild(entry);
+  // Show scroll hint if user has scrolled up
+  const atBottom=el.scrollHeight-el.scrollTop-el.clientHeight<30;
+  if(atBottom){el.scrollTop=el.scrollHeight;document.getElementById('btl-scroll-hint').style.display='none';}
+  else{document.getElementById('btl-scroll-hint').style.display='block';}
+}
+function logSep(){
+  const el=document.getElementById('btl-msg');
+  const s=document.createElement('div');s.className='log-sep';el.appendChild(s);
+}
+function clearBtlLog(){
+  document.getElementById('btl-msg').innerHTML='';
+  document.getElementById('btl-scroll-hint').style.display='none';
+}
+// Setup scroll-hint auto-hide when user scrolls down manually
+document.getElementById('btl-msg').addEventListener('scroll',function(){
+  const atBottom=this.scrollHeight-this.scrollTop-this.clientHeight<30;
+  document.getElementById('btl-scroll-hint').style.display=atBottom?'none':'block';
+});
+
+function playerAct(a,b){
+  if(bTurn!=='player'||bWait)return;
+  if(b.skipTurns>0){
+    b.skipTurns--;
+    const paralSlide=[{type:'damage',who:'⚡ Paralisi',text:'Sei paralizzato dalla paura!\n\nNon riesci a muoverti. Salti questo turno.'}];
+    logSep();logMsg('⚡ Sei paralizzato! Salti questo turno.','damage','⚡ Paralisi');
+    btlAnimateEnemyAtk();
+    bTurn='enemy';bWait=true;disableActBtns();
+    twShow(paralSlide,()=>setTimeout(()=>enemyTurn(b),400));
+    return;
+  }
+  bWait=true;disableActBtns();
+
+  // Confusione: swap tecnica casualmente
+  let realA=a;
+  if(hasStatus('confusione')&&Math.random()<.5){
+    const others=b.d.acts.filter(x=>x.id!==a.id);
+    realA=others[Math.floor(Math.random()*others.length)];
+  }
+
+  let dmg=realA.baseDmg;
+  if(b.phaseImmune&&b.phaseImmune.has(realA.id))dmg=Math.floor(dmg/2);
+  if(b.bonusParadox&&realA.tag==='par')dmg=Math.round(dmg*2);
+  const extraMsg=b.d.onPlayerAct(realA.id,b)||'';
+  b.d.hp=Math.max(0,b.d.hp-dmg);
+  if(hasStatus('proiezione')){const ref=Math.round(dmg*.5);pHP=Math.max(1,pHP-ref);}
+
+  const isConfused=realA.id!==a.id;
+  const whoLabel=isConfused?`🌀 Tu (confuso) → ${realA.n}`:`⚔️ Tu → ${realA.n}`;
+  const mainMsg=isConfused?`⚠️ Confusione! Usi involontariamente: ${realA.n}\n\n${realA.msg}`:realA.msg;
+
+  // ── Build typewriter slides ──
+  const playerSlides=[];
+  playerSlides.push({type:isConfused?'status':'player', who:whoLabel, text:mainMsg});
+  if(extraMsg){
+    extraMsg.split('\n').filter(l=>l.trim()).forEach(line=>{
+      const type=line.startsWith('⚠️')||line.startsWith('⚡')?'damage':
+                 line.startsWith('✨')?'system':
+                 line.startsWith('🌀')||line.startsWith('🛡️')?'status':'status';
+      playerSlides.push({type, who:'', text:line.trim()});
+    });
+  }
+  if(hasStatus('proiezione'))playerSlides.push({type:'damage',who:'',text:`🌀 Proiezione: ${Math.round(dmg*.5)} HP si riflettono su di te!`});
+
+  // ── Le tecniche di reazione mostrano prima la mossa del nemico ──
+  // par = Accordo Paradossale, ris = Ristrutturazione
+  const isReaction=!isConfused&&(realA.tag==='par'||realA.tag==='ris');
+
+  // ── Write to log immediately ──
+  btlAnimatePlayerAtk(realA.id);
+  logSep();logMsg(mainMsg,'player',whoLabel);
+  if(extraMsg){
+    extraMsg.split('\n').filter(l=>l.trim()).forEach(line=>{
+      if(line.startsWith('⚠️')||line.startsWith('⚡'))logMsg(line,'damage');
+      else if(line.startsWith('✨'))logMsg(line,'system');
+      else if(line.startsWith('🌀')||line.startsWith('🛡️'))logMsg(line,'status');
+      else if(line.trim())logMsg(line,'status');
+    });
+  }
+  if(hasStatus('proiezione'))logMsg(`🌀 Proiezione: ${Math.round(dmg*.5)} HP si riflettono su di te!`,'damage');
+  renderBtlUI();
+
+  // Controllo transizioni di fase
+  const ratio=b.d.hp/b.d.maxHp;
+  for(let i=b.d.phases.length-1;i>b.currentPhase;i--){
+    if(ratio<=b.d.phases[i].th){setTimeout(()=>enterPhase(b,i),450);break;}
+  }
+
+  if(b.d.hp<=0){
+    // Nemico sconfitto: mostra solo le slide del player (il nemico non attacca)
+    twShow(playerSlides,()=>{
+      logSep();logMsg(b.d.defMsg,'victory','✨ Sconfitta');
+      btlAnimateVictory();
+      document.getElementById('cont-btn').style.display='block';
+      document.getElementById('btl-acts').innerHTML='';
+      b.enc.done=true;if(b.enc._mk)b.enc._mk.visible=false;if(b.enc._gl)b.enc._gl.visible=false;
+      pHP=Math.min(pMax,pHP+25);renderBtlUI();
+      setTimeout(()=>grantItemForEnc(b.enc.id),1400);
+    });
+    return;
+  }
+
+  bTurn='enemy';
+
+  if(isReaction){
+    // Tecnica di reazione: mostra prima l'attacco del nemico, poi la risposta del player
+    const{atk:_,slides:enemySlides}=computeEnemyTurn(b);
+    const allSlides=[...enemySlides,...playerSlides];
+    if(pHP<=1){
+      twShow(allSlides,()=>setTimeout(()=>{
+        logSep();logMsg(`L'energia si esaurisce...\n\nOgni caduta è un insegnamento. Ora conosci le tattiche del nemico — riprova con strategie diverse.`,'phase','💧 Sconfitta');
+        const cb=document.getElementById('cont-btn');cb.style.display='block';cb.textContent='Riprova ↺';
+        cb.onclick=()=>{pHP=pMax;pStatus={};renderStatusHUD();showBattle(BATTLES[b.enc.id],b.enc);};
+      },400));
+      return;
+    }
+    twShow(allSlides,()=>{
+      bTurn='player';bWait=false;enableActBtns();buildActBtns(b);
+    });
+  } else {
+    // Tecnica normale: player agisce, poi il nemico risponde
+    twShow(playerSlides,()=>setTimeout(()=>enemyTurn(b),350));
+  }
+}
+
+function enemyTurn(b){
+  const {atk,slides}=computeEnemyTurn(b);
+  if(pHP<=1){
+    twShow(slides,()=>setTimeout(()=>{
+      logSep();logMsg(`L'energia si esaurisce...\n\nOgni caduta è un insegnamento. Ora conosci le tattiche del nemico — riprova con strategie diverse.`,'phase','💧 Sconfitta');
+      const cb=document.getElementById('cont-btn');cb.style.display='block';cb.textContent='Riprova ↺';
+      cb.onclick=()=>{pHP=pMax;pStatus={};renderStatusHUD();showBattle(BATTLES[b.enc.id],b.enc);};
+    },400));
+    return;
+  }
+  twShow(slides,()=>{
+    bTurn='player';bWait=false;enableActBtns();buildActBtns(b);
+  });
+}
+
+// Calcola il turno nemico, logga, restituisce {atk, slides}
+function computeEnemyTurn(b){
+  const atk=b.d.onEnemyTurn(b);
+  const statusMsgs=tickStatus();
+  pHP=Math.max(1,pHP-atk.dmg);renderBtlUI();
+  if(atk.eff)applyStatus(atk.eff);
+  const eWho=`${b.d.emoji} ${b.d.name}`;
+  btlAnimateEnemyAtk();
+  logSep();logMsg(atk.msg,'enemy',eWho);
+  logMsg(`−${atk.dmg} energia!`,'damage');
+  if(atk.eff&&STATUS_DEF[atk.eff])logMsg(`⚠️ Stato applicato: ${STATUS_DEF[atk.eff].label} — ${STATUS_DEF[atk.eff].desc}`,'status');
+  if(statusMsgs.length)statusMsgs.forEach(m=>logMsg(m,'damage'));
+  renderBtlUI();
+  const slides=[];
+  slides.push({type:'enemy',who:eWho,text:atk.msg});
+  slides.push({type:'damage',who:'',text:`−${atk.dmg} energia!`});
+  if(atk.eff&&STATUS_DEF[atk.eff])slides.push({type:'status',who:'',text:`⚠️ Stato applicato: ${STATUS_DEF[atk.eff].label} — ${STATUS_DEF[atk.eff].desc}`});
+  if(statusMsgs.length)statusMsgs.forEach(m=>slides.push({type:'damage',who:'',text:m}));
+  return{atk,slides};
+}
+
+function disableActBtns(){document.querySelectorAll('.abtn').forEach(b=>b.disabled=true);}
+function enableActBtns(){document.querySelectorAll('.abtn').forEach(b=>b.disabled=false);}
+
+function btlContinue(){
+  document.getElementById('btl').style.display='none';
+  document.getElementById('btl-challenge').style.display='none';
+  document.getElementById('cont-btn').style.display='none';
+  document.getElementById('cont-btn').textContent='Continua →';
+  document.getElementById('cont-btn').onclick=btlContinue;
+  // Restore world HUD
+  document.getElementById('hud').style.display='block';
+  document.getElementById('minimap').style.display='block';
+  document.getElementById('hint').style.display='block';
+  document.getElementById('touch-controls').style.display='flex';
+  hideSceneOverlay();
+  stopBtl3D();
+  curBattle=null;gs='playing';
+  if(ENCS.find(e=>e.type==='boss'&&e.done))setTimeout(showEnding,1400);
+}
+
+// ═══════════════════════════════════════════════
+//  ENDING
+// ═══════════════════════════════════════════════
+function showEnding(){
+  gs='ending';document.getElementById('ending').style.display='flex';
+  document.getElementById('end-txt').innerHTML=`
+    <p>Clomp emerge dalle acque, trasformato.</p>
+    <p>Ha incontrato il Critico che memorizzava le sue mosse e imparava dai suoi errori.<br>Ha fronteggiato la Paura che cresceva dall'evitamento e paralizzava chi non osava esporsi.<br>Ha affrontato il Condizionamento in tre forme — ciascuna con le sue vulnerabilità, ciascuna con la sua trappola.</p>
+    <p>E ha capito: i guardiani della mente non si sconfiggono con la forza o la ripetizione.<br>Si trasformano attraverso flessibilità, paradosso, e la capacità di cambiare approccio quando quello attuale non funziona.</p>
+    <p><em>«La definizione di follia è fare sempre la stessa cosa aspettandosi risultati diversi.»</em></p>
+    <p>La Terapia Strategico-Breve non promette un viaggio senza labirinti.<br>Promette di darti mappe nuove per attraversarli.</p>
+    <p style="margin-top:22px;font-size:24px">🌊</p>
+  `;
+}
+
+// ═══════════════════════════════════════════════
+//  TOUCH CONTROLS
+// ═══════════════════════════════════════════════
+function setupTouch(){
+  const setKey=(code,val)=>{if(val)keys[code]=true;else delete keys[code];};
+  const addTouch=(id,code)=>{
+    const el=document.getElementById(id);if(!el)return;
+    el.addEventListener('touchstart',e=>{e.preventDefault();setKey(code,true);},{passive:false});
+    el.addEventListener('touchend',e=>{e.preventDefault();setKey(code,false);},{passive:false});
+    el.addEventListener('mousedown',()=>setKey(code,true));
+    el.addEventListener('mouseup',()=>setKey(code,false));
+    el.addEventListener('mouseleave',()=>setKey(code,false));
+  };
+  addTouch('t-up','ArrowUp');addTouch('t-down','ArrowDown');
+  addTouch('t-left','ArrowLeft');addTouch('t-right','ArrowRight');
+  const actionBtn=document.getElementById('t-action');
+  if(actionBtn){
+    actionBtn.addEventListener('touchstart',e=>{e.preventDefault();if(gs==='playing')tryEnc();},{passive:false});
+    actionBtn.addEventListener('click',()=>{if(gs==='playing')tryEnc();});
+  }
+}
+setupTouch();
+
+// ═══════════════════════════════════════════════
+//  MAIN LOOP
+// ═══════════════════════════════════════════════
+let t=0,autoT=0;
+function loop(){
+  requestAnimationFrame(loop);t+=.016;
+  if(encCooldown>0)encCooldown--;
+  if(gs==='playing'){
+    const md=new THREE.Vector3();
+    if(keys['ArrowLeft']||keys['KeyA'])md.x-=1;if(keys['ArrowRight']||keys['KeyD'])md.x+=1;
+    if(keys['ArrowUp']||keys['KeyW'])md.z-=1;if(keys['ArrowDown']||keys['KeyS'])md.z+=1;
+    if(md.length()>0){
+      md.normalize().multiplyScalar(SPD);CL.g.rotation.y=Math.atan2(md.x,md.z);
+      const nx=CL.g.position.x+md.x;if(!isWall(nx,CL.g.position.z))CL.g.position.x=nx;
+      const nz=CL.g.position.z+md.z;if(!isWall(CL.g.position.x,nz))CL.g.position.z=nz;
+      CL.aL.rotation.x=Math.sin(t*3)*.42;CL.aR.rotation.x=-Math.sin(t*3)*.42;
+      CL.lL.rotation.x=-Math.sin(t*4)*.2;CL.lR.rotation.x=Math.sin(t*4)*.2;
+      CL.g.position.y=Math.sin(t*2)*.09;
+    }else CL.g.position.y=Math.sin(t*1.5)*.05;
+    CL.hL.rotation.z=Math.sin(t*1.2)*.09;CL.hR.rotation.z=-Math.sin(t*1.2)*.09;
+    const gs2=1+Math.sin(t*2)*.14;CL.gw.scale.set(gs2,1,gs2);CL.gw.material.opacity=.28+Math.sin(t*2)*.1;
+    cam.position.x+=(CL.g.position.x-cam.position.x)*.08;
+    cam.position.z+=(CL.g.position.z+10-cam.position.z)*.08;
+    cam.position.y=13;cam.lookAt(CL.g.position.x,0,CL.g.position.z);
+    pLight.position.set(CL.g.position.x,2,CL.g.position.z);
+    autoT++;if(autoT>35){autoT=0;tryEnc();}
+    waters.forEach(({mesh},i)=>mesh.material.opacity=.78+Math.sin(t*1.4+i*.7)*.09);
+    ENCS.forEach(e=>{if(e._mk&&!e.done){e._mk.rotation.y=t*.9;e._mk.position.y=-.38+Math.sin(t*2+e.row)*.12;}});
+    drawMM();updateHUD();
+  }
+  pLights.forEach((l,i)=>l.intensity=.25+Math.sin(t*.65+i*1.4)*.14);
+  renderer.render(scene,cam);
+}
+
+window.addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();});
+
+document.getElementById('sBtn').onclick=()=>{
+  document.getElementById('title').style.display='none';
+  gs='playing';
+  setTimeout(()=>showDlg(DIALOGS.intro,()=>{}),1400);
+};
+
+// ═══════════════════════════════════════════════
+//  JRPG MENU SYSTEM
+// ═══════════════════════════════════════════════
+
+// ── Inventario oggetti ──────────────────────────
+const ITEMS_DEF=[
+  {
+    id:'acqua_vitale', name:'Acqua Vitale', icon:'💧', qty:2,
+    desc:'Un sorso d\'acqua cristallina dal labirinto. Ripristina 30 energia.',
+    effect:'+30 HP', usable:true,
+    use(){
+      const heal=Math.min(30,pMax-pHP);
+      if(heal<=0){menuFeedback('item','Energia già al massimo.',false);return false;}
+      pHP=Math.min(pMax,pHP+heal);updateHUD();
+      menuFeedback('item',`✨ Bevi l\'Acqua Vitale: +${heal} energia!`,true);
+      return true;
+    }
+  },
+  {
+    id:'cristallo_chiarezza', name:'Cristallo di Chiarezza', icon:'🔮', qty:1,
+    desc:'Un frammento del labirinto che dissolve la confusione mentale. Rimuove tutti gli stati negativi.',
+    effect:'Rimuove stati', usable:true,
+    use(){
+      const count=Object.keys(pStatus).length;
+      if(count===0){menuFeedback('item','Nessuno stato attivo da rimuovere.',false);return false;}
+      pStatus={};renderStatusHUD();
+      menuFeedback('item','✨ Il Cristallo dissolve ogni condizionamento!',true);
+      return true;
+    }
+  },
+  {
+    id:'rugiada_paradosso', name:'Rugiada del Paradosso', icon:'🌊', qty:1,
+    desc:'Distillato della saggezza del labirinto. Ripristina tutta l\'energia.',
+    effect:'HP al massimo', usable:true,
+    use(){
+      const heal=pMax-pHP;
+      if(heal===0){menuFeedback('item','Energia già al massimo.',false);return false;}
+      pHP=pMax;updateHUD();
+      menuFeedback('item',`✨ La Rugiada ristora completamente: +${heal} energia!`,true);
+      return true;
+    }
+  },
+  {
+    id:'nota_paradossale', name:'Nota Paradossale', icon:'📜', qty:0,
+    desc:'Un promemoria sulle tecniche strategico-brevi. Non ha uso diretto ma ricorda che il contrario funziona.',
+    effect:'—', usable:false,
+    use(){return false;}
+  },
+  {
+    id:'seme_coraggio', name:'Seme del Coraggio', icon:'🌱', qty:1,
+    desc:'Aumenta permanentemente l\'energia massima di 20 punti.',
+    effect:'+20 HP max', usable:true,
+    use(){
+      pMax+=20;pHP=Math.min(pHP+20,pMax);updateHUD();
+      menuFeedback('item','✨ Il Seme germoglia: energia massima +20!',true);
+      return true;
+    }
+  },
+];
+
+// Runtime inventory (copies with live qty)
+let inventory=ITEMS_DEF.map(i=>({...i}));
+
+// ── Salvataggio ─────────────────────────────────
+const SAVE_KEY_PREFIX='clomp_save_';
+const AUTO_KEY='clomp_autosave';
+const NUM_SLOTS=3;
+
+function buildSaveData(){
+  return {
+    ts:Date.now(),
+    pHP,pMax,pStatus:{...pStatus},
+    encs:ENCS.map(e=>({id:e.id,done:e.done})),
+    inventory:inventory.map(i=>({id:i.id,qty:i.qty})),
+    pos:{x:CL.g.position.x,z:CL.g.position.z},
+    zone:document.getElementById('loc').textContent,
+  };
+}
+
+function applySaveData(data){
+  pHP=data.pHP??100;pMax=data.pMax??100;
+  pStatus=data.pStatus??{};renderStatusHUD();
+  if(data.encs)data.encs.forEach(se=>{
+    const enc=ENCS.find(e=>e.id===se.id);
+    if(enc){enc.done=se.done;if(enc.done&&enc._mk)enc._mk.visible=false;if(enc.done&&enc._gl)enc._gl.visible=false;}
+  });
+  if(data.inventory)data.inventory.forEach(si=>{
+    const item=inventory.find(i=>i.id===si.id);if(item)item.qty=si.qty;
+  });
+  if(data.pos){CL.g.position.x=data.pos.x;CL.g.position.z=data.pos.z;}
+  updateHUD();
+}
+
+function saveToSlot(slot){
+  try{
+    localStorage.setItem(SAVE_KEY_PREFIX+slot,JSON.stringify(buildSaveData()));
+    return true;
+  }catch(e){return false;}
+}
+function loadFromSlot(slot){
+  try{
+    const raw=localStorage.getItem(SAVE_KEY_PREFIX+slot);
+    if(!raw)return null;
+    return JSON.parse(raw);
+  }catch(e){return null;}
+}
+function deleteSlot(slot){
+  try{localStorage.removeItem(SAVE_KEY_PREFIX+slot);}catch(e){}
+}
+function autosave(){
+  try{localStorage.setItem(AUTO_KEY,JSON.stringify(buildSaveData()));}catch(e){}
+}
+
+// ── Menu open/close ─────────────────────────────
+let menuOpen=false;
+let prevGs='playing';
+
+function openMenu(){
+  if(gs==='title'||gs==='ending'||gs==='battle'||gs==='puzzle')return;
+  prevGs=gs;gs='menu';menuOpen=true;
+  document.getElementById('menu').style.display='block';
+  renderMenuTab('stato');
+}
+function closeMenu(){
+  autosave();
+  document.getElementById('menu').style.display='none';
+  menuOpen=false;gs=prevGs;
+}
+
+// Close on backdrop click
+document.getElementById('menu').addEventListener('click',e=>{
+  if(e.target===document.getElementById('menu'))closeMenu();
+});
+
+// M key
+document.addEventListener('keydown',e=>{
+  if(e.code==='KeyM'){
+    if(menuOpen)closeMenu();
+    else openMenu();
+    return;
+  }
+  if(e.code==='Escape'&&menuOpen){closeMenu();return;}
+  keys[e.code]=true;
+  if((e.code==='Space'||e.code==='Enter')&&gs==='playing')tryEnc();
+});
+
+// ── Tab switching ────────────────────────────────
+let currentTab='stato';
+function switchTab(tab){
+  currentTab=tab;
+  document.querySelectorAll('.mtab').forEach((b,i)=>{
+    b.classList.toggle('active',['stato','oggetti','salva'][i]===tab);
+  });
+  ['stato','oggetti','salva'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display=t===tab?'block':'none';
+  });
+  renderMenuTab(tab);
+}
+
+function renderMenuTab(tab){
+  if(tab==='stato')renderStatoTab();
+  else if(tab==='oggetti')renderOggettiTab();
+  else if(tab==='salva')renderSalvaTab();
+}
+
+// ── TAB STATO ───────────────────────────────────
+const ENC_META={
+  intro:{name:'Voce del Labirinto',icon:'🌊',type:'dialogo'},
+  porta:{name:'La Porta Paradossale',icon:'🚪',type:'enigma'},
+  critico:{name:'Il Critico Interiore',icon:'🪞',type:'battaglia'},
+  specchio:{name:'Lo Specchio dell\'Ansia',icon:'✨',type:'enigma'},
+  paura:{name:'La Paura Evitata',icon:'🌑',type:'battaglia'},
+  boss:{name:'Il Grande Condizionamento',icon:'🌀',type:'boss'},
+};
+
+function renderStatoTab(){
+  // HP bar
+  document.getElementById('menu-hpbar').style.width=Math.max(0,pHP/pMax*100)+'%';
+  document.getElementById('menu-hp-val').textContent=`${pHP}/${pMax}`;
+  const{row,col}=wToG(CL.g.position.x,CL.g.position.z);
+  const z=ZONES.find(z=>Math.abs(z.r-row)+Math.abs(z.c-col)<3)||ZONES[0];
+  document.getElementById('stat-zone').textContent=z.n;
+
+  // Stats grid
+  const done=ENCS.filter(e=>e.done).length;
+  const total=ENCS.length;
+  const techs=['par','ris','pre','peg','esp'].length;
+  document.getElementById('stat-grid').innerHTML=`
+    <div class="stat-card">
+      <div class="stat-card-label">Incontri completati</div>
+      <div class="stat-card-value">${done} / ${total}</div>
+      <div class="stat-card-sub">${Math.round(done/total*100)}% del percorso</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Energia massima</div>
+      <div class="stat-card-value">${pMax} HP</div>
+      <div class="stat-card-sub">Resistenza interiore</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Tecniche disponibili</div>
+      <div class="stat-card-value">5</div>
+      <div class="stat-card-sub">Paradosso · Ristrutturazione · Prescrizione · Catastrofizzazione · Esposizione</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-label">Oggetti nello zaino</div>
+      <div class="stat-card-value">${inventory.filter(i=>i.qty>0).length}</div>
+      <div class="stat-card-sub">Risorse terapeutiche</div>
+    </div>
+  `;
+
+  // Status effects
+  const sl=document.getElementById('menu-status-list');
+  const active=Object.values(pStatus);
+  if(active.length===0){sl.innerHTML='<div class="no-status">Nessuno stato alterato attivo.</div>';}
+  else{
+    sl.innerHTML=active.map(s=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:6px;background:rgba(40,0,60,.4);border:1px solid #330055;margin-bottom:5px">
+        <span class="sbadge ${s.cls}" style="font-size:11px;padding:3px 9px">${s.label}</span>
+        <span style="flex:1;font-size:11px;color:#7755aa">${s.desc}</span>
+        <span style="font-size:11px;color:#9966cc">Turni: ${s.remaining}</span>
+      </div>
+    `).join('');
+  }
+
+  // Encounters list
+  const el=document.getElementById('menu-enc-list');
+  el.innerHTML=ENCS.map(e=>{
+    const m=ENC_META[e.id]||{name:e.id,icon:'❓',type:'?'};
+    const done=e.done;
+    return `<div class="enc-item ${done?'done':''}">
+      <span class="enc-icon">${m.icon}</span>
+      <div style="flex:1">
+        <div class="enc-name">${m.name}</div>
+        <div style="font-size:10px;color:#443355;margin-top:1px">${m.type}</div>
+      </div>
+      <span class="enc-badge ${done?'done':'todo'}">${done?'✓ Completato':'In attesa'}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── TAB OGGETTI ─────────────────────────────────
+function renderOggettiTab(){
+  const grid=document.getElementById('item-grid');
+  grid.innerHTML=inventory.map((item,idx)=>{
+    const noQty=item.qty===0;
+    return `<div class="item-card ${noQty?'empty':''}" ${item.usable&&!noQty?`onclick="useItem(${idx})"`:''}
+      title="${item.usable&&!noQty?'Clicca per usare':''}">
+      <div class="item-icon">${item.icon}</div>
+      <div class="item-qty">×${item.qty}</div>
+      <div class="item-name">${item.name}</div>
+      <div class="item-desc">${item.desc}</div>
+      <div class="item-effect">${item.effect}</div>
+    </div>`;
+  }).join('');
+}
+
+function useItem(idx){
+  if(gs!=='menu')return;
+  const item=inventory[idx];
+  if(!item||!item.usable||item.qty<=0)return;
+  const ok=item.use();
+  if(ok){
+    item.qty--;
+    renderOggettiTab();
+    renderStatoTab();
+  }
+}
+
+function menuFeedback(tab,msg,ok){
+  const el=document.getElementById(tab==='item'?'item-feedback':'save-feedback');
+  el.textContent=msg;el.style.color=ok?'#44ffaa':'#ff8888';el.style.opacity='1';
+  setTimeout(()=>el.style.opacity='0',2800);
+}
+
+// ── TAB SALVA ───────────────────────────────────
+function renderSalvaTab(){
+  const container=document.getElementById('save-slots');
+  container.innerHTML='';
+  for(let s=1;s<=NUM_SLOTS;s++){
+    const data=loadFromSlot(s);
+    const div=document.createElement('div');div.className='save-slot';
+    const ts=data?new Date(data.ts).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
+    const zone=data?.zone||'—';
+    const hp=data?`${data.pHP}/${data.pMax} HP`:'—';
+    const prog=data?`${data.encs?.filter(e=>e.done).length||0}/${ENCS.length} incontri`:'—';
+    div.innerHTML=`
+      <div class="save-slot-num">${s}</div>
+      <div class="save-slot-info">
+        <div class="save-slot-name">${data?'Slot '+s+' — '+zone:'Slot vuoto'}</div>
+        <div class="save-slot-meta">${data?ts+' · '+hp+' · '+prog:'—'}</div>
+      </div>
+      <div class="save-slot-btns">
+        <button class="sbtn sbtn-save" onclick="doSave(${s})">💾 Salva</button>
+        <button class="sbtn sbtn-load" ${!data?'disabled':''} onclick="doLoad(${s})">📂 Carica</button>
+        <button class="sbtn sbtn-del" ${!data?'disabled':''} onclick="doDelete(${s})">🗑</button>
+      </div>`;
+    container.appendChild(div);
+  }
+}
+
+function doSave(slot){
+  const ok=saveToSlot(slot);
+  menuFeedback('save',ok?`✨ Partita salvata nello slot ${slot}!`:'❌ Errore nel salvataggio.',ok);
+  renderSalvaTab();
+}
+
+function doLoad(slot){
+  const data=loadFromSlot(slot);
+  if(!data){menuFeedback('save','❌ Slot vuoto.',false);return;}
+  applySaveData(data);
+  menuFeedback('save',`✨ Partita caricata dallo slot ${slot}!`,true);
+  renderMenuTab(currentTab);
+  setTimeout(()=>{closeMenu();notify('✨ Partita caricata!');},900);
+}
+
+function doDelete(slot){
+  deleteSlot(slot);
+  menuFeedback('save',`🗑 Slot ${slot} eliminato.`,true);
+  renderSalvaTab();
+}
+
+// Autosave on page hide
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&gs!=='title'&&gs!=='ending')autosave();});
+
+// Menu button in touch controls
+function addMenuTouchBtn(){
+  const panel=document.querySelector('.touch-panel');
+  if(!panel)return;
+  const btn=document.createElement('button');
+  btn.className='touch-action-btn';
+  btn.style.cssText='width:70px;height:70px;font-size:22px;border-radius:18px;background:rgba(40,0,70,.75);border-color:#6600cc';
+  btn.innerHTML='☰<span style="font-size:11px">Menu</span>';
+  btn.addEventListener('touchstart',e=>{e.preventDefault();if(menuOpen)closeMenu();else openMenu();},{passive:false});
+  btn.addEventListener('click',()=>{if(menuOpen)closeMenu();else openMenu();});
+  panel.appendChild(btn);
+}
+addMenuTouchBtn();
+
+// ── Item pickup system (chiamata quando enc è completato) ────
+function grantItemForEnc(encId){
+  const grants={
+    porta:'acqua_vitale',
+    specchio:'cristallo_chiarezza',
+    critico:'acqua_vitale',
+    paura:'seme_coraggio',
+    boss:'rugiada_paradosso',
+  };
+  const itemId=grants[encId];
+  if(!itemId)return;
+  const item=inventory.find(i=>i.id===itemId);
+  if(item){item.qty++;notify(`✨ Hai ottenuto: ${item.icon} ${item.name}!`);}
+}
+
+document.addEventListener('keyup',e=>delete keys[e.code]);
+
+loop();
+</script>
+</body>
+</html>

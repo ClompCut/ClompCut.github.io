@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <video id="bg-video" autoplay muted playsinline preload="auto">
+        <source src="bg.mp4" type="video/mp4">
+    </video>
     <header>
         <h1>Joey's Game gallery</h1>
     </header>
@@ -22,6 +25,55 @@
         </section>
     </main>
     <script>
+        const bgVideo = document.getElementById('bg-video');
+        const bgPlaybackSpeed = 0.25;
+        let bgReverseLoopId = null;
+        let bgReverseMode = false;
+        let bgLastTimestamp = null;
+
+        const cancelBgReverse = () => {
+            if (bgReverseLoopId) {
+                cancelAnimationFrame(bgReverseLoopId);
+                bgReverseLoopId = null;
+            }
+        };
+
+        const startBgForward = () => {
+            cancelBgReverse();
+            bgReverseMode = false;
+            bgVideo.playbackRate = bgPlaybackSpeed;
+            bgVideo.currentTime = 0;
+            bgVideo.play().catch(() => {});
+        };
+
+        const startBgReverse = () => {
+            bgReverseMode = true;
+            bgVideo.pause();
+            bgVideo.playbackRate = bgPlaybackSpeed;
+            bgLastTimestamp = null;
+            const step = (timestamp) => {
+                if (!bgLastTimestamp) {
+                    bgLastTimestamp = timestamp;
+                }
+                const delta = (timestamp - bgLastTimestamp) / 1000;
+                bgLastTimestamp = timestamp;
+                bgVideo.currentTime = Math.max(0, bgVideo.currentTime - delta * bgPlaybackSpeed);
+                if (bgVideo.currentTime <= 0.001) {
+                    startBgForward();
+                } else {
+                    bgReverseLoopId = requestAnimationFrame(step);
+                }
+            };
+            bgReverseLoopId = requestAnimationFrame(step);
+        };
+
+        bgVideo.addEventListener('loadedmetadata', startBgForward);
+        bgVideo.addEventListener('ended', () => {
+            if (!bgReverseMode) {
+                startBgReverse();
+            }
+        });
+
         const buttons = document.querySelectorAll('.select-game');
         const iframe = document.getElementById('game-frame');
         let iframeReady = false;
@@ -84,6 +136,11 @@
             button.addEventListener('focus', () => handleEnter(videoFile, title, description));
             button.addEventListener('mouseleave', handleLeave);
             button.addEventListener('blur', handleLeave);
+            button.addEventListener('click', () => {
+                if (title === 'Labirinto acquatico di Clomp') {
+                    window.location.href = 'aquirinto.html';
+                }
+            });
         });
     </script>
 </body>

@@ -14,7 +14,17 @@ body {
     font-family: Arial, sans-serif;
     line-height: 1.4;
     color: #333;
-    background: url('Bg.png') center/cover no-repeat fixed;
+    background: #000;
+}
+
+#bg-video {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -1;
+    pointer-events: none;
 }
 
 header {
@@ -36,6 +46,9 @@ main {
     gap: 1.5rem;
     align-items: center;
     margin-top: 2rem;
+    background-color: rgba(0, 0, 0, 0.8);
+    padding: 1.5rem;
+    border-radius: 24px;
 }
 
 .game-card {
@@ -44,7 +57,8 @@ main {
     align-items: stretch;
     justify-content: flex-start;
     gap: 1rem;
-    background: linear-gradient(180deg, #0b3d91 0%, #0a2345 100%);
+    background-color: rgba(10, 35, 69, 0.8);
+    background-image: linear-gradient(180deg, rgba(11, 61, 145, 0.8) 0%, rgba(10, 35, 69, 0.8) 100%);
     border-radius: 24px;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
     padding: 1.5rem;
@@ -77,7 +91,8 @@ main {
     border-radius: 24px;
     overflow: hidden;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
-    background: #051420;
+    background-color: rgba(5, 18, 32, 0.8);
+    background-image: none;
 }
 
 .game-preview iframe {
