@@ -39,6 +39,8 @@
             flex-direction: column;
             justify-content: center;
             gap: 1rem;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .preview-description h2 {
@@ -57,11 +59,17 @@
         .preview-video-container {
             flex: 1;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             background: #071a2e;
             border-radius: 24px;
             padding: 1rem;
+            gap: 1rem;
+            overflow: hidden;
+            min-height: 0;
+            width: 100%;
+            box-sizing: border-box;
         }
 
         video {
@@ -71,6 +79,80 @@
             object-fit: cover;
             border-radius: 20px;
             background: #000;
+            max-height: calc(100% - 4rem);
+        }
+
+        #play-game-button {
+            min-width: 180px;
+            padding: 0.9rem 1.2rem;
+            border: none;
+            border-radius: 999px;
+            background: #34d1f0;
+            color: #051420;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.25s ease, transform 0.2s ease;
+        }
+
+        #play-game-button:hover:not(:disabled) {
+            background: #61e2ff;
+            transform: translateY(-2px);
+        }
+
+        #play-game-button:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 860px), (orientation: portrait) {
+            body {
+                padding: 0.75rem;
+                overflow-y: auto;
+            }
+
+            .preview-layout {
+                flex-direction: column;
+                gap: 1rem;
+                width: min(100%, 100vw);
+                height: auto;
+                max-height: none;
+            }
+
+            .preview-description {
+                flex: 1 1 auto;
+                min-height: auto;
+                max-height: 40vh;
+                padding: 1rem;
+            }
+
+            .preview-description h2 {
+                font-size: clamp(1.25rem, 4vw, 1.8rem);
+            }
+
+            .preview-description p {
+                font-size: 0.95rem;
+                line-height: 1.6;
+            }
+
+            .preview-video-container {
+                flex: 0 0 auto;
+                width: 100%;
+                max-height: 55vh;
+                padding: 0.75rem;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            video {
+                max-height: 50vh;
+            }
+
+            #play-game-button {
+                min-width: 160px;
+                padding: 0.8rem 1rem;
+                font-size: 0.95rem;
+            }
         }
     </style>
 </head>
@@ -82,13 +164,16 @@
         </div>
         <div class="preview-video-container">
             <video id="preview-video" src="" muted playsinline></video>
+            <button id="play-game-button" type="button" hidden>Gioca</button>
         </div>
     </div>
     <script>
         const video = document.getElementById('preview-video');
         const titleElement = document.getElementById('preview-title');
         const descriptionElement = document.getElementById('preview-text');
+        const playButton = document.getElementById('play-game-button');
         let currentVideo = '';
+        let playUrl = '';
 
         const loadVideo = (src) => {
             if (!src) return;
@@ -105,12 +190,33 @@
             descriptionElement.textContent = description || 'Passa il mouse su un gioco per vedere la descrizione a sinistra del video.';
         };
 
+        const showPlayButton = () => {
+            playButton.hidden = false;
+            playButton.disabled = !Boolean(playUrl);
+        };
+
+        const hidePlayButton = () => {
+            playButton.hidden = true;
+        };
+
+        playButton.addEventListener('click', () => {
+            if (playUrl) {
+                window.top.location.href = playUrl;
+            }
+        });
+
+        video.addEventListener('playing', showPlayButton);
+        video.addEventListener('pause', hidePlayButton);
+        video.addEventListener('ended', hidePlayButton);
+
         window.addEventListener('message', event => {
             const message = event.data;
             if (message && typeof message === 'object') {
                 if (message.type === 'load') {
                     loadVideo(message.src);
                     updateDescription(message.title, message.description);
+                    playUrl = message.playUrl || '';
+                    hidePlayButton();
                     return;
                 }
                 if (message.type === 'play') {
