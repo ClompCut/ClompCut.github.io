@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Duello Paradossale - Terapia Strategica Breve CCG</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link rel="stylesheet" href="Paradosso3d.css">
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="ui-layer">
+  <!-- Opponent Bar -->
+  <div class="player-bar opponent">
+    <div class="avatar">🧙</div>
+    <div class="player-info">
+      <div class="player-name">Nemesi Paradoxalis</div>
+      <div class="hp-bar-container">
+        <div class="hp-bar enemy-hp" id="enemy-hp-bar"></div>
+        <div class="hp-text"><span id="enemy-hp-text">30</span> / 30</div>
+      </div>
+    </div>
+    <div class="mana-display" id="enemy-mana"></div>
+    <div class="deck-count">🂠 <span id="enemy-deck">12</span></div>
+  </div>
+
+  <!-- Turn Indicator -->
+  <div class="turn-indicator" id="turn-indicator">Turno 1 — La Tua Mossa</div>
+
+  <!-- Game Log -->
+  <div class="game-log" id="game-log"></div>
+
+  <!-- Phase Indicator -->
+  <div class="phase-indicator" id="phase-indicator">
+    <div class="phase-dot active" title="Pesca"></div>
+    <div class="phase-dot" title="Principale"></div>
+    <div class="phase-dot" title="Combattimento"></div>
+    <div class="phase-dot" title="Fine"></div>
+  </div>
+
+  <!-- Player Field -->
+  <div class="field-wrapper player">
+    <div class="field-zone player-field" id="player-field"></div>
+  </div>
+
+  <!-- Opponent Field -->
+  <div class="field-wrapper opponent">
+    <div class="field-zone opponent-field" id="enemy-field"></div>
+  </div>
+
+  <!-- Player Hand -->
+  <div class="hand" id="player-hand"></div>
+
+  <!-- End Turn Button -->
+  <button class="end-turn-btn" id="end-turn-btn" onclick="endTurn()">Fine Turno</button>
+
+  <!-- Tooltip -->
+  <div class="tooltip" id="tooltip"></div>
+</div>
+
+<!-- Game Over Overlay -->
+<div class="game-over-overlay" id="game-over-overlay">
+  <div class="game-over-text" id="game-over-text"></div>
+  <button class="restart-btn" onclick="location.reload()">Nuovo Duello</button>
+</div>
+
+<script src="Paradosso3d.js" defer></script>
+</body>
+</html>
