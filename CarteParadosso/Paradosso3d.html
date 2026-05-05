@@ -66,6 +66,15 @@
   <button class="restart-btn" onclick="location.reload()">Nuovo Duello</button>
 </div>
 
-<script src="Paradosso3d.js" defer></script>
+<script src="paradosso3D-threejs.js" defer></script>
+<script src="paradosso3D-logic.js" defer></script>
+<script>
+// Inizializzazione dopo che entrambi i file sono caricati
+window.addEventListener('load', () => {
+  window.GameLogic.createPlayerBar();
+  window.ThreeJSScene.initThreeJS();
+  window.GameLogic.initGame();
+});
+</script>
 </body>
 </html>
