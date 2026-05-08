@@ -16,6 +16,7 @@ let cameraDrag = {
   radius: 0,
   speed: 0.005
 };
+let raycaster, mouse;
 
 // Inizializza la scena Three.js
 function initThreeJS() {
@@ -40,6 +41,10 @@ function initThreeJS() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.2;
+
+  // Initialize raycaster for battlefield clicks
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
 
   // Lights
   const ambientLight = new THREE.AmbientLight(0x222244, 0.5);
@@ -91,6 +96,25 @@ function onCanvasMouseDown(event) {
     return;
   }
 
+  // Calculate mouse position in normalized device coordinates
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  // Update raycaster
+  raycaster.setFromCamera(mouse, camera);
+
+  // Check if clicking on player summon zone
+  const intersects = raycaster.intersectObject(playerSummonZone);
+  
+  if (intersects.length > 0) {
+    // Clicked on the battlefield - handle game logic instead of camera drag
+    if (window.handleBattlefieldClick) {
+      window.handleBattlefieldClick();
+    }
+    return;
+  }
+
+  // Not on battlefield - activate camera drag
   cameraDrag.active = true;
   cameraDrag.startX = event.clientX;
   cameraDrag.startY = event.clientY;

@@ -381,6 +381,15 @@ function updateHand() {
   });
 }
 
+// Register battlefield click handler for Three.js
+window.handleBattlefieldClick = function() {
+  if (gameState.turnOwner !== 'player' || gameState.selectedCard === null) return;
+  const card = gameState.playerHand[gameState.selectedCard];
+  if (!card || card.type !== 'creature') return;
+  
+  playCardOnTarget(gameState.selectedCard, null, 'player');
+};
+
 function updateField() {
   const playerFieldEl = document.getElementById('player-field');
   playerFieldEl.innerHTML = '';
