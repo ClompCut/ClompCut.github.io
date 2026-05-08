@@ -385,6 +385,18 @@ function updateField() {
   const playerFieldEl = document.getElementById('player-field');
   playerFieldEl.innerHTML = '';
 
+  // Click on empty player field to summon creature from hand
+  playerFieldEl.onclick = event => {
+    const clickedCard = event.target.closest('.field-card');
+    if (clickedCard) return;
+    if (!playerFieldEl.contains(event.target)) return;
+    if (gameState.turnOwner !== 'player' || gameState.selectedCard === null) return;
+    const card = gameState.playerHand[gameState.selectedCard];
+    if (!card || card.type !== 'creature') return;
+
+    playCardOnTarget(gameState.selectedCard, null, 'player');
+  };
+
   gameState.playerField.forEach((card, index) => {
     const el = document.createElement('div');
     el.className = 'field-card';
@@ -411,11 +423,12 @@ function updateField() {
   const enemyFieldEl = document.getElementById('enemy-field');
   enemyFieldEl.innerHTML = '';
 
+  // Click on empty enemy field to summon creature (attack face)
   enemyFieldEl.onclick = event => {
     const clickedCard = event.target.closest('.field-card');
     if (clickedCard) return;
     if (!enemyFieldEl.contains(event.target)) return;
-    if (gameState.turnOwner !== 'player' || !gameState.attackMode || gameState.selectedCard === null) return;
+    if (gameState.turnOwner !== 'player' || gameState.selectedCard === null) return;
     const card = gameState.playerHand[gameState.selectedCard];
     if (!card || card.type !== 'creature') return;
 
@@ -439,10 +452,8 @@ function updateField() {
     `;
 
     el.addEventListener('click', () => {
-      if (gameState.attackMode) {
+      if (gameState.selectedCard !== null) {
         attackCreature(index, 'enemy');
-      } else if (gameState.selectedCard !== null) {
-        playCardOnTarget(gameState.selectedCard, index, 'enemy');
       }
     });
 
@@ -500,7 +511,7 @@ function selectCard(index) {
     gameState.selectedCard = index;
 
     if (card.type === 'creature') {
-      gameState.attackMode = false; // Reset attack mode, will be set based on target
+      gameState.attackMode = true; // Enable attack mode for creatures
       addLog(`Selezionato ${card.name}. Clicca sul campo vuoto per evocarla o su una creatura nemica per attaccarla.`, '');
     } else if (card.type === 'technique') {
       gameState.attackMode = false;
@@ -631,16 +642,12 @@ function playCardOnTarget(handIndex, targetIndex, targetOwner) {
 }
 
 function attackCreature(fieldIndex, owner) {
-  if (!gameState.attackMode || gameState.selectedCard === null) return;
+  if (gameState.selectedCard === null) return;
 
   const attackerCard = gameState.playerHand[gameState.selectedCard];
   if (!attackerCard || attackerCard.type !== 'creature') return;
 
-  const targetField = owner === 'player' ? gameState.playerField : gameState.enemyField;
-  const targetCard = targetField[fieldIndex];
-
-  if (!targetCard) return;
-
+  // Attack from hand: use playCardOnTarget
   playCardOnTarget(gameState.selectedCard, fieldIndex, owner);
 }
 
