@@ -500,8 +500,8 @@ function selectCard(index) {
     gameState.selectedCard = index;
 
     if (card.type === 'creature') {
-      gameState.attackMode = true;
-      addLog(`Selezionato ${card.name}. Clicca su una creatura nemica per attaccarla, o sul campo vuoto per evocarla.`, '');
+      gameState.attackMode = false; // Reset attack mode, will be set based on target
+      addLog(`Selezionato ${card.name}. Clicca sul campo vuoto per evocarla o su una creatura nemica per attaccarla.`, '');
     } else if (card.type === 'technique') {
       gameState.attackMode = false;
       addLog(`Selezionato ${card.name}. Clicca su un bersaglio nemico.`, '');
@@ -546,6 +546,15 @@ function playCardOnTarget(handIndex, targetIndex, targetOwner) {
   if (!card) return;
 
   if (card.type === 'creature') {
+    // Spend mana first
+    gameState.playerManaSpent += card.cost;
+    gameState.playerHand.splice(handIndex, 1);
+
+    // Initialize creature stats
+    card._currentATK = card.atk;
+    card._currentHP = card.hp;
+    card._summonTurn = gameState.turn;
+
     // Creature attacks or is summoned
     if (targetIndex !== null) {
       // Attack target creature
@@ -555,7 +564,7 @@ function playCardOnTarget(handIndex, targetIndex, targetOwner) {
       if (!targetCard) return;
 
       // Combat
-      const damageToTarget = card.atk;
+      const damageToTarget = card._currentATK;
       const damageToAttacker = targetCard._currentATK || targetCard.atk;
 
       targetCard._currentHP -= damageToTarget;
@@ -571,38 +580,34 @@ function playCardOnTarget(handIndex, targetIndex, targetOwner) {
         }
       }
 
-      // Remove dead creatures
+      // Remove dead target creature
       if (targetCard._currentHP <= 0) {
         addLog(`${targetCard.name} è stata distrutta!`, '');
-        if (targetOwner === 'enemy' && window.ThreeJSScene) {
-          window.ThreeJSScene.getSummonedMeshes().filter(m => m !== mesh);
+        targetField.splice(targetIndex, 1);
+        if (targetOwner === 'enemy' && window.ThreeJSScene && window.ThreeJSScene.cleanupDeadCreatures) {
+          window.ThreeJSScene.cleanupDeadCreatures();
         }
       }
+
+      // Summon attacker to field
+      gameState.playerField.push(card);
+
+      if (window.ThreeJSScene && window.ThreeJSScene.createCreatureMesh) {
+        window.ThreeJSScene.createCreatureMesh(card, true);
+      }
+
+      triggerEnterEffect(card, 'player');
 
       if (card._currentHP <= 0) {
         addLog(`${card.name} è stata distrutta in combattimento!`, '');
+        // Remove from field if it died
+        const idx = gameState.playerField.indexOf(card);
+        if (idx !== -1) gameState.playerField.splice(idx, 1);
       } else {
-        // Attacker survives, summon it
-        gameState.playerHand.splice(handIndex, 1);
-        card._currentATK = card.atk;
-        card._currentHP = card.hp;
-        card._summonTurn = gameState.turn;
-        gameState.playerField.push(card);
-
-        if (window.ThreeJSScene && window.ThreeJSScene.createCreatureMesh) {
-          window.ThreeJSScene.createCreatureMesh(card, true);
-        }
-
-        triggerEnterEffect(card, 'player');
+        addLog(`${card.name} è entrata in campo dopo l'attacco!`, '');
       }
     } else {
       // Summon to empty field
-      gameState.playerManaSpent += card.cost;
-      gameState.playerHand.splice(handIndex, 1);
-
-      card._currentATK = card.atk;
-      card._currentHP = card.hp;
-      card._summonTurn = gameState.turn;
       gameState.playerField.push(card);
 
       if (window.ThreeJSScene && window.ThreeJSScene.createCreatureMesh) {
